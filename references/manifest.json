@@ -1,0 +1,269 @@
+{
+  "files": [
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/通用床尾软包挡板.glb",
+      "archived": "exports/baseline-v12/通用床尾软包挡板.glb",
+      "bytes": 1676228,
+      "sha256": "4964bd20c57ec4dbfaa8949267b10537cea215938a4b0f5bf4400223890a99ca"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D暮蓝织序预览.png",
+      "archived": "exports/baseline-v12/智能床3D暮蓝织序预览.png",
+      "bytes": 400926,
+      "sha256": "01d5d364d37ff8cab41f1b902a94b02ddfeaf0a2bd86fa5d300772cd5e809acd"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D独立落地床屏预览.png",
+      "archived": "exports/baseline-v12/智能床3D独立落地床屏预览.png",
+      "bytes": 515397,
+      "sha256": "17642612dfd8636ff4a896a8bb8595377928842bb1d2f8284e7a4ba98d016c94"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D齐边款俯视比例.png",
+      "archived": "exports/baseline-v12/智能床3D齐边款俯视比例.png",
+      "bytes": 154888,
+      "sha256": "22d41a27fbe21ff7b6a037fb0c6bd4c4d1f67c2aba8908747a3992ae6e9237cf"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D五段床板预览.png",
+      "archived": "exports/baseline-v12/智能床3D五段床板预览.png",
+      "bytes": 198434,
+      "sha256": "f66bd828658f9d2e2837aa84be5ca36084ba20d99d817034e9b879806405a31f"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D床尾挡板与标识.png",
+      "archived": "exports/baseline-v12/智能床3D床尾挡板与标识.png",
+      "bytes": 856165,
+      "sha256": "f8b3e1d23f1a02b5f987325edc572354d1752b607e4f55f107e720b32fec617f"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D竖向分格床屏.png",
+      "archived": "exports/baseline-v12/智能床3D竖向分格床屏.png",
+      "bytes": 566859,
+      "sha256": "47db223d250178f34c5644db974d7a419de86c4ce83db434b718a00f3e49660d"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/独立落地床屏.glb",
+      "archived": "exports/baseline-v12/独立落地床屏.glb",
+      "bytes": 1932628,
+      "sha256": "cb13f55c94f73ae9c0f60113a5fb39f5195c52353e2da14f140fcdb2225e14fd"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D电动床架预览.png",
+      "archived": "exports/baseline-v12/智能床3D电动床架预览.png",
+      "bytes": 279846,
+      "sha256": "9d8fe8fe8ea88b3fc65d0abce28981f0c095e11f8914c61cb2bb5a5e8a7ae875"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D暮蓝织序折弯.png",
+      "archived": "exports/baseline-v12/智能床3D暮蓝织序折弯.png",
+      "bytes": 433614,
+      "sha256": "5aa4ea628cab6bc25e387a49d39c45ed3ee60f319c2a2155cca94da7ce7f5e50"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D齐边款侧视比例.png",
+      "archived": "exports/baseline-v12/智能床3D齐边款侧视比例.png",
+      "bytes": 300358,
+      "sha256": "dd7c14849bbce132e1cf9c53700e84cbcfdbd1de3a55b0fe4ed781559adc2f77"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D床尾挡板近景.png",
+      "archived": "exports/baseline-v12/智能床3D床尾挡板近景.png",
+      "bytes": 1070750,
+      "sha256": "600ea63e8b0da49585ecb4d230686ac98b8cb555a3608eb71d6dec04cffac7ae"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/暮蓝织序_配置.json",
+      "archived": "exports/baseline-v12/暮蓝织序_配置.json",
+      "bytes": 4260,
+      "sha256": "851a6c2a1024d8f82adecda918a0e01262fd111bfbd262e285c002721f049dd6"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D驱动机构预览.png",
+      "archived": "exports/baseline-v12/智能床3D驱动机构预览.png",
+      "bytes": 279846,
+      "sha256": "9d8fe8fe8ea88b3fc65d0abce28981f0c095e11f8914c61cb2bb5a5e8a7ae875"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D暮蓝织序纹理近景.png",
+      "archived": "exports/baseline-v12/智能床3D暮蓝织序纹理近景.png",
+      "bytes": 1101211,
+      "sha256": "8c788dc80f113166b589e100c0c7d9a57fa4299f6b1c2b97eb907c5c0973d1d4"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D推杆侧视预览.png",
+      "archived": "exports/baseline-v12/智能床3D推杆侧视预览.png",
+      "bytes": 236202,
+      "sha256": "c4c5bcdacba2d29e649adf1984ce760c38612a30dbcc9c131c15e46c4a977d59"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床垫四角修复近景.png",
+      "archived": "exports/baseline-v12/智能床垫四角修复近景.png",
+      "bytes": 940879,
+      "sha256": "6bf9e90365fab43e93221daa39dd04e2e69df2b1fe915048c24ddb7ec0764126"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D齐边床邦预览.png",
+      "archived": "exports/baseline-v12/智能床3D齐边床邦预览.png",
+      "bytes": 400926,
+      "sha256": "01d5d364d37ff8cab41f1b902a94b02ddfeaf0a2bd86fa5d300772cd5e809acd"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D床垫围边近景.png",
+      "archived": "exports/baseline-v12/智能床3D床垫围边近景.png",
+      "bytes": 827017,
+      "sha256": "6841ddb67ad886fccf7feb9786cbb3fcb3e4f0cb7ec32c8fd92e09254ae08309"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D抬背侧视预览.png",
+      "archived": "exports/baseline-v12/智能床3D抬背侧视预览.png",
+      "bytes": 325940,
+      "sha256": "128050d9e10bbc214f394665520e05b4bfb526c37aa6cff2f70f7483cf4cbf83"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D内嵌款俯视比例.png",
+      "archived": "exports/baseline-v12/智能床3D内嵌款俯视比例.png",
+      "bytes": 175339,
+      "sha256": "0be8c21f62f442f196fc2e7d939a4582480f941ece77a15b8f0835fd7aa8756f"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D侧视接合预览.png",
+      "archived": "exports/baseline-v12/智能床3D侧视接合预览.png",
+      "bytes": 300358,
+      "sha256": "dd7c14849bbce132e1cf9c53700e84cbcfdbd1de3a55b0fe4ed781559adc2f77"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/暮蓝织序_折弯整床.glb",
+      "archived": "exports/baseline-v12/暮蓝织序_折弯整床.glb",
+      "bytes": 13722116,
+      "sha256": "972ffc4e0ea91c965723d8cfc3fefee3d4931ce3e3dab498625e307eddca9781"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D鼠尾草配色.png",
+      "archived": "exports/baseline-v12/智能床3D鼠尾草配色.png",
+      "bytes": 344522,
+      "sha256": "76b05856a48d1733238629a881727cda0d8ee40ff05f7c3855e66e718a9a5d8d"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/暮蓝织序_竖向分格床屏.glb",
+      "archived": "exports/baseline-v12/暮蓝织序_竖向分格床屏.glb",
+      "bytes": 2191568,
+      "sha256": "c237cb4277bec15acabcb1257a1b8757804d0316b3c5323b6438ab90dbf297bd"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D午夜靛蓝配色.png",
+      "archived": "exports/baseline-v12/智能床3D午夜靛蓝配色.png",
+      "bytes": 364983,
+      "sha256": "3f328c70ab3066d9dff191376c5950f147626bda9ec5b870d623cd8847267432"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D内嵌款侧视比例.png",
+      "archived": "exports/baseline-v12/智能床3D内嵌款侧视比例.png",
+      "bytes": 300719,
+      "sha256": "c2a1eb11ae93934843d2b7d29ed1c9f560ba81974ce0f918809a936ec6d43d6b"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D结构爆炸预览.png",
+      "archived": "exports/baseline-v12/智能床3D结构爆炸预览.png",
+      "bytes": 288586,
+      "sha256": "c060700b7378d4ccb416ab37620188be41253bf7b579dca999adc19ed664dd23"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/电动床架_STEP参考优化.glb",
+      "archived": "exports/baseline-v12/电动床架_STEP参考优化.glb",
+      "bytes": 2840160,
+      "sha256": "18d51292ae2522aabfd04c755bf0feb4361fda6939b96c817c5ef8fe8553eff7"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D演示.html",
+      "archived": "exports/baseline-v12/智能床3D演示.html",
+      "bytes": 2266907,
+      "sha256": "5655e66b49270912ae3708b4e5e76bac9fac45ce7a0c274f31fe4abdf1282a63"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D暮蓝织序正视.png",
+      "archived": "exports/baseline-v12/智能床3D暮蓝织序正视.png",
+      "bytes": 350361,
+      "sha256": "80546c4e425463596a91f2e309f884e8ac4ceaef0deefed990fab453bf054077"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/暮蓝织序_整床.glb",
+      "archived": "exports/baseline-v12/暮蓝织序_整床.glb",
+      "bytes": 13721428,
+      "sha256": "4307246db1179a458490c814d42c490b2e62cebceb052cd68a572d0a5fe2f795"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D床屏皮纹近景.png",
+      "archived": "exports/baseline-v12/智能床3D床屏皮纹近景.png",
+      "bytes": 1133553,
+      "sha256": "d67484664ecd5a14f55a85404a5c1c51fb9506084c6cef358911f5a832a950a0"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D预览.png",
+      "archived": "exports/baseline-v12/智能床3D预览.png",
+      "bytes": 400926,
+      "sha256": "01d5d364d37ff8cab41f1b902a94b02ddfeaf0a2bd86fa5d300772cd5e809acd"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床垫四角修复检查.png",
+      "archived": "exports/baseline-v12/智能床垫四角修复检查.png",
+      "bytes": 1670099,
+      "sha256": "c18aa8ef788a21ff048987a68ca41080bec3738b157ec8dbb7beb7bb32e4a70c"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Documents/Codex/2026-09-07/chua/outputs/智能床3D气囊预览.png",
+      "archived": "exports/baseline-v12/智能床3D气囊预览.png",
+      "bytes": 363253,
+      "sha256": "adf33ec1b83bb5ad0d54ee39c0d14f4d0cafcea6f3de28422522ff0272673def"
+    },
+    {
+      "source": "/var/folders/1t/fnj6526s1ll2f2rl5nzk3b7m0000gn/T/codex-clipboard-63f63b64-a1bd-4361-8526-9b7f46000e2d.png",
+      "archived": "references/images/codex-clipboard-63f63b64-a1bd-4361-8526-9b7f46000e2d.png",
+      "bytes": 794126,
+      "sha256": "f5c7af743ca7c315e509fe984e2851ada9ec57fc8b58ff98990f0ac6fa4b7d42"
+    },
+    {
+      "source": "/var/folders/1t/fnj6526s1ll2f2rl5nzk3b7m0000gn/T/codex-clipboard-45d42cf4-d630-460b-adf1-18501d547649.jpg",
+      "archived": "references/images/codex-clipboard-45d42cf4-d630-460b-adf1-18501d547649.jpg",
+      "bytes": 94418,
+      "sha256": "7a45edc9733a5e8f3e87bfe959b33f5e4f52b4b610ca2ed70bf997dff260aa28"
+    },
+    {
+      "source": "/var/folders/1t/fnj6526s1ll2f2rl5nzk3b7m0000gn/T/codex-clipboard-5fcb78e4-f070-4594-aa0a-cbf7fb0d6aff.jpg",
+      "archived": "references/images/codex-clipboard-5fcb78e4-f070-4594-aa0a-cbf7fb0d6aff.jpg",
+      "bytes": 128855,
+      "sha256": "dba5a9fbf6076cce3903c305ebf46ba2bd1636e64a407604004d6dc022336dd7"
+    },
+    {
+      "source": "/var/folders/1t/fnj6526s1ll2f2rl5nzk3b7m0000gn/T/codex-clipboard-6aa9cc52-b8e3-4c41-861e-83d0fc094492.png",
+      "archived": "references/images/codex-clipboard-6aa9cc52-b8e3-4c41-861e-83d0fc094492.png",
+      "bytes": 1666711,
+      "sha256": "ff5de35adbdb37b17a404eb19ec4bc37c0d353f1ed76785c25b2ee4dca261a41"
+    },
+    {
+      "source": "/var/folders/1t/fnj6526s1ll2f2rl5nzk3b7m0000gn/T/codex-clipboard-7db508ba-fb61-4cca-8cff-c52593dd53b4.png",
+      "archived": "references/images/codex-clipboard-7db508ba-fb61-4cca-8cff-c52593dd53b4.png",
+      "bytes": 546328,
+      "sha256": "da878b9570abb27fcb1467f70c6d089b749d5d43ef4a01588a4f0ea27dfd53c0"
+    },
+    {
+      "source": "/var/folders/1t/fnj6526s1ll2f2rl5nzk3b7m0000gn/T/codex-clipboard-ddab32a8-f65f-4c8e-88dd-10e03455afab.png",
+      "archived": "references/images/codex-clipboard-ddab32a8-f65f-4c8e-88dd-10e03455afab.png",
+      "bytes": 807177,
+      "sha256": "5cb180b2fbb1e9b9f5df4b099ac81c8792ed6210f3623bae04a66626e9fb2aea"
+    },
+    {
+      "source": "/var/folders/1t/fnj6526s1ll2f2rl5nzk3b7m0000gn/T/codex-clipboard-9ff709dc-d410-49e8-aa72-99c3899a9177.png",
+      "archived": "references/images/codex-clipboard-9ff709dc-d410-49e8-aa72-99c3899a9177.png",
+      "bytes": 1238708,
+      "sha256": "1ddca5e5c6c067a7d62806d2f16d1252318cdb4a988c6bfb1b8ef45923ada016"
+    },
+    {
+      "source": "/Users/tanxiaoyi/Library/Containers/com.tencent.WeWorkMac/Data/Documents/Profiles/A10DC56BD041181FFB06ECEF538A0E2A/Caches/Files/2026-09/c799976b5e888c64f0b8e28b840b6432/BZZ1-007-160X190.stp",
+      "archived": "references/cad/BZZ1-007-160X190.stp",
+      "bytes": 10949389,
+      "sha256": "0b4fb7b6ea1c08e3faffa67984cf59e52ecbc6338adea756fd64851bc183a15a"
+    }
+  ],
+  "unavailable_sources": []
+}

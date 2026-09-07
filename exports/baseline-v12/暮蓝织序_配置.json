@@ -1,0 +1,223 @@
+{
+  "version": 12,
+  "retainer": {
+    "style": "reference upholstered retainer",
+    "dimensions": {
+      "width": 0.3,
+      "height": 0.096,
+      "depth": 0.02,
+      "bottom": 0.371,
+      "rear": 0.954
+    },
+    "branding": "DeRUCCI",
+    "mount": "Calf_Deck",
+    "universal": true
+  },
+  "branding": [
+    {
+      "text": "DeRUCCI AI",
+      "placement": "foot facing",
+      "artwork": "official DeRUCCI wordmark with reference AI badge"
+    },
+    {
+      "text": "T11+",
+      "placement": "foot facing",
+      "artwork": "reference T11+ reconstruction"
+    }
+  ],
+  "modelView": "solid",
+  "showDecks": false,
+  "frameReference": "BZZ1-007-160X190.stp",
+  "dimensions": {
+    "mattress": {
+      "width": 1.6,
+      "length": 1.9,
+      "deckHeight": 0.36,
+      "mattressHeight": 0.21
+    },
+    "surround": {
+      "label": "齐边床邦",
+      "outerWidth": 1.6,
+      "foot": 0.95,
+      "innerWidth": 1.48,
+      "innerFoot": 0.906,
+      "deckWidth": 1.43,
+      "headboardWidth": 1.72
+    },
+    "headboard": {
+      "width": 1.72,
+      "height": 1.25
+    }
+  },
+  "bedStyle": "flush",
+  "headboardStyle": "channel",
+  "waistband": true,
+  "surroundAccents": false,
+  "collection": "indigoWeave",
+  "units": "meters",
+  "pose": {
+    "back": 0,
+    "leg": 0
+  },
+  "pressures": [
+    [
+      50,
+      50,
+      50,
+      50
+    ],
+    [
+      50,
+      50,
+      50,
+      50
+    ]
+  ],
+  "materials": {
+    "fabric": {
+      "label": "床垫上层面料",
+      "color": "#263044",
+      "pattern": "performance",
+      "roughness": 0.94,
+      "metalness": 0,
+      "repeat": [
+        1,
+        1
+      ],
+      "maps": {}
+    },
+    "side": {
+      "label": "床垫围边面料",
+      "color": "#222938",
+      "pattern": "microMesh",
+      "roughness": 0.92,
+      "metalness": 0,
+      "repeat": [
+        1,
+        1
+      ],
+      "maps": {}
+    },
+    "waistband": {
+      "label": "床垫腰线织带",
+      "color": "#cfc5b2",
+      "pattern": "ribbon",
+      "roughness": 0.88,
+      "metalness": 0,
+      "repeat": [
+        4,
+        1
+      ],
+      "maps": {}
+    },
+    "leather": {
+      "label": "床屏皮革",
+      "color": "#343947",
+      "pattern": "grain",
+      "roughness": 0.8,
+      "metalness": 0,
+      "repeat": [
+        6,
+        3
+      ],
+      "maps": {}
+    },
+    "surround": {
+      "label": "床邦与床尾皮革",
+      "color": "#242329",
+      "pattern": "grain",
+      "roughness": 0.8,
+      "metalness": 0,
+      "repeat": [
+        6,
+        3
+      ],
+      "maps": {}
+    },
+    "piping": {
+      "label": "床垫与床体包边",
+      "color": "#c6bbaa",
+      "pattern": null,
+      "roughness": 0.78,
+      "metalness": 0,
+      "repeat": [
+        1,
+        1
+      ],
+      "maps": {}
+    },
+    "frame": {
+      "label": "金属床架",
+      "color": "#354046",
+      "pattern": null,
+      "roughness": 0.4,
+      "metalness": 0.7,
+      "repeat": [
+        1,
+        1
+      ],
+      "maps": {}
+    },
+    "foam": {
+      "label": "基础承托泡棉",
+      "color": "#d9d1bd",
+      "pattern": "foam",
+      "roughness": 1,
+      "metalness": 0,
+      "repeat": [
+        2,
+        2
+      ],
+      "maps": {}
+    },
+    "retainer": {
+      "label": "床尾软包挡板",
+      "color": "#443d36",
+      "pattern": "grain",
+      "roughness": 0.82,
+      "metalness": 0,
+      "repeat": [
+        3,
+        1
+      ],
+      "maps": {}
+    },
+    "retainerLogo": {
+      "label": "挡板 DeRUCCI 标识",
+      "color": "#171410",
+      "pattern": "derucci",
+      "roughness": 0.94,
+      "metalness": 0,
+      "repeat": [
+        1,
+        1
+      ],
+      "maps": {}
+    },
+    "brand": {
+      "label": "床垫 DeRUCCI AI 标识",
+      "color": "#e0dace",
+      "pattern": "derucciAI",
+      "roughness": 0.83,
+      "metalness": 0,
+      "repeat": [
+        1,
+        1
+      ],
+      "maps": {}
+    },
+    "modelMark": {
+      "label": "床垫 T11+ 标识",
+      "color": "#e0dace",
+      "pattern": "t11",
+      "roughness": 0.83,
+      "metalness": 0,
+      "repeat": [
+        1,
+        1
+      ],
+      "maps": {}
+    }
+  },
+  "textureNote": "上传纹理记录为文件名，请将图片放入 public/textures 并在 materials.js 配置 URL。"
+}

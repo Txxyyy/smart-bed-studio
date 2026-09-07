@@ -1,0 +1,52 @@
+
+> smart-bed-studio@1.0.0 test
+> node --test src/*.test.js
+
+✔ reference collection is additive and all textile assignments remain valid (2.318458ms)
+✔ flat pose preserves mattress coordinates and dimensions (4.567875ms)
+✔ seat anchor stays fixed for every preset and extreme angles (1.746916ms)
+✔ spine conserves arc length during articulation (3.152334ms)
+✔ fully inflated top does not fold back along the centerline at extreme angles (62.933042ms)
+✔ left and right air zones independently lift the matching surface (0.121ms)
+✔ inflation lifts the top while preserving its foundation (0.110625ms)
+✔ angle inputs are clamped and samples outside mattress remain finite (0.525792ms)
+✔ actuators extend monotonically and remain inside the configured stroke limits (4.66875ms)
+✔ five rigid decks preserve the source hinge layout and foot support links keep a constant length (1.293708ms)
+✔ STEP pin measurements and independent roller tracks agree with the source (3.478583ms)
+✔ surround encloses both sides and the foot while leaving the mechanism opening clear (22.204708ms)
+✔ surround joins the independent headboard without moving during articulation (15.6055ms)
+✔ rectangular air pouch inflation preserves footprint and lower surface, independently by side (10.988167ms)
+✔ all eight rounded pouches and their sealed edges remain finite while bent and inflated (5.594375ms)
+✔ only three separated layers are built and no legacy component stack remains (5.467375ms)
+✔ exploded inspection flattens layers, isolates any chosen component and restores articulation (10.682291ms)
+✔ all visible exploded meshes have valid unit normals for GLB export (11.532791ms)
+✔ imported motors retain their geometry and align shafts, clevis pins and rollers (1.448042ms)
+✔ headboard has two shaped cushions, two full height wings and its own floor supports (2.524291ms)
+✔ flush surround aligns to the mattress and provides a smaller clear internal frame (11.401416ms)
+✔ both frame sizes preserve hinge motion, fixed actuator lengths and transverse clearance (392.488375ms)
+✔ mattress binding stays within 1.1 mm of its cover triangles at all angles and pressures (15.93925ms)
+✔ the headboard contact face leaves a small, consistent mattress gap in both bed styles (16.038416ms)
+✔ raised mattress and rigid back deck remain in front of the fuller headboard (12703.026042ms)
+✔ independent headboard mode shows only its own structure and restores the complete bed (7.487541ms)
+✔ the bed rear terminates in front of the floor apron with an actual assembly gap (12.016875ms)
+✔ native head deck tips clear the revised surround rear cross rail (142.779875ms)
+✔ CAD assembly has five source panels, two base halves and six grounded legs (3.7825ms)
+✔ the mattress underside clears all five imported panels throughout the angle range (14163.193333ms)
+✔ actual mattress, surround and headboard bounds meet the 160 by 190 size contract (6.621291ms)
+✔ embedded decks retain the supplied STEP dimensions and mattress is supported near both ends (1.706292ms)
+✔ universal upholstered retainer replaces the iron bar without shrinking in the flush frame (12.694ms)
+✔ padded retainer clears the deformed mattress and foot surround over all leg angles (1206.391042ms)
+✔ front brand marks stay on the cover with readable outward normals through bending and inflation (198.941625ms)
+✔ reference headboard has eight sculpted channels and preserves both fitted sizes and floor contact (132.67125ms)
+✔ waistband follows actual cover triangles with no corner occlusion when flat or articulated (174.142625ms)
+✔ headboard style changes are cached, reversible and independent of the mattress pose (7.546416ms)
+✔ all three mattress bindings have two continuous boundary loops with no flipped corner faces (8.414792ms)
+✔ all four binding corners stay outside the mattress when flat, articulated and unevenly inflated (3730.618041ms)
+ℹ tests 40
+ℹ suites 0
+ℹ pass 40
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 33368.231875
