@@ -6,3 +6,7 @@ work/
 .env
 .env.*
 !.env.example
+
+# Local browser checks and generated screenshots
+.playwright-cli/
+output/

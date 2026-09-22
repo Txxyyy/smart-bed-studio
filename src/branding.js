@@ -68,7 +68,7 @@ export function createUpholsteredRetainer(parent,library){
   return g;
 }
 
-export function createMattressBranding(cover,library){
+export function createMattressBranding(cover,library,marks=FRONT_MARKS){
   const source=cover.geometry,p=source.attributes.position,idx=source.index,triangles=[];
   const front=source.groups.find(g=>g.materialIndex===4);
   for(let i=front.start;i<front.start+front.count;i+=3){
@@ -76,7 +76,7 @@ export function createMattressBranding(cover,library){
     const tri=new THREE.Triangle(...ids.map(n=>new THREE.Vector3().fromBufferAttribute(p,n)));
     if(tri.getArea()>1e-10)triangles.push({ids,tri});
   }
-  return FRONT_MARKS.map(mark=>{
+  return marks.map(mark=>{
     const geometry=new THREE.PlaneGeometry(mark.width,mark.height,18,4),out=geometry.attributes.position,bindings=[];
     const q=new THREE.Vector3(),bary=new THREE.Vector3();
     for(let i=0;i<out.count;i++){

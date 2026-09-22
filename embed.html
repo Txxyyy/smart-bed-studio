@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Mattress Viewer</title>
+<style>html,body,#model-viewport{margin:0;width:100%;height:100%;overflow:hidden;background:#10191d}canvas{display:block;touch-action:none}#boot-error{position:absolute;inset:0;display:none;place-items:center;color:#dce9e5;font:14px sans-serif;padding:24px}</style>
+<script>
+// This small bootstrap remains readable even if the main bundle cannot parse.
+window.mattressBootError=function(code,message){var event={protocolVersion:1,type:'event',name:'bridge.failed',data:{code:code,message:message},instanceId:null};window.mattressBootFailure=event;if(window.MattressHost)window.MattressHost.postMessage(JSON.stringify(event));var el=document.getElementById('boot-error');if(el){el.style.display='grid';el.textContent=message;}};
+window.addEventListener('error',function(e){if(!window.MattressBridge)window.mattressBootError('BOOT_FAILED',e.message||'模型脚本加载失败');});
+</script></head><body><div id="model-viewport"></div><div id="boot-error" role="alert"></div><script type="module" src="/src/embed-app.js"></script></body></html>

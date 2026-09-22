@@ -6,9 +6,14 @@ import { MaterialLibrary, MATERIAL_CONFIG } from './materials.js';
 import { SmartBed } from './model.js';
 import { ANATOMY_LAYERS } from './anatomy.js';
 import { COLLECTIONS,COLOR_SWATCHES,PATTERNS,PATTERN_OPTIONS,HEADBOARD_STYLES,DEFAULT_COLLECTION } from './cmf.js';
-import { PRESETS, ZONES, clamp } from './kinematics.js';
+import { PRESETS, ZONES } from './kinematics.js';
 import { DIMENSIONS, HEADBOARD_LAYOUT } from './dimensions.js';
 import { prepareBrandArtwork } from './branding.js';
+import { FirmnessEffect } from './firmness-effect.js';
+import { HeatingEffect } from './heating-effect.js';
+import { HEAT_ZONES, HEAT_LEVELS, setHeatLevel } from './heating.js';
+import { DEMO_STEPS, sampleShowroomDemo, showroomDemoReveal } from './showroom-demo.js';
+import { SIDE_NAMES, sideIndices, isSelectedZone, setZonePressure, desiredPressure, firmnessCamera, shortestAngle, sampleAirReveal, REVEAL_TIMING } from './firmness.js';
 import './style.css';
 
 const icons = {
@@ -39,6 +44,15 @@ document.querySelector('#app').innerHTML=`
       <div id="viewport"></div>
       <div class="stage-title"><div class="eyebrow"><span>NOCTIS / 01</span><span class="hairline"></span> ADAPTIVE SLEEP SYSTEM</div><h1>好睡眠，从支撑开始<span>。</span></h1><p>智能床垫 · 电动床架 · 皮质床屏</p></div>
       <div class="stage-badge"><span class="live-dot"></span><span id="projection-label">REALTIME 3D</span></div>
+      <div class="firmness-heading" hidden><span class="eyebrow">INTELLIGENT COMFORT / ONE MATTRESS</span><h1>支撑与温暖，融于一体。</h1><p>单侧扫描透视 · 腰腿独立温热</p><div class="effect-legend"><span class="air-legend">内部 · 气囊支撑</span><span class="heat-legend">表层 · 腰腿加热</span></div></div>
+      <div class="firmness-hud" hidden>
+        <div class="firmness-channel"><span class="live-dot"></span><span id="firmness-channel">LEFT CHANNEL</span><span id="firmness-phase">分区已就绪</span></div>
+        <div class="firmness-readout"><div><small id="firmness-address">L / 02</small><strong id="firmness-name">左侧 · 腰部</strong></div><div class="firmness-number"><b id="firmness-current">50</b><span id="firmness-unit">%</span></div></div>
+        <div class="firmness-meter"><i></i></div><div class="firmness-caption"><span id="firmness-min">偏软</span><span id="firmness-target">目标 50%</span><span id="firmness-max">偏硬</span></div>
+        <div class="heat-live-readout" id="heat-live-readout">腰部加热 关闭 · 腿部加热 关闭</div>
+      </div>
+      <div class="firmness-caption-bar" hidden><span>一体床垫 · 分区独立</span><button id="stop-auto-demo" hidden>停止循环 ${icon('pause')}</button><button id="exit-firmness">退出演示 ${icon('arrow')}</button></div>
+      <div id="firmness-announcement" class="sr-only" role="status" aria-live="polite"></div>
       <div class="camera-tools" aria-label="视角控制"><button data-camera="perspective" class="icon-button active" title="立体视角" aria-label="立体视角">${icon('orbit')}</button><button data-camera="side" class="icon-button" title="正投影侧视：核对接合与高度" aria-label="正投影侧视">${icon('side')}</button><button data-camera="top" class="icon-button" title="正投影俯视：核对长宽比例" aria-label="正投影俯视">${icon('top')}</button><i></i><button id="reset-view" class="icon-button" title="复位视角" aria-label="复位视角">${icon('reset')}</button></div>
       <div class="model-label" id="label-leather"><span></span><div>双靠包落地床屏<small>FLOOR-STANDING HEADBOARD</small></div></div>
       <div class="model-label" id="label-air"><span></span><div id="air-label-text">自适应气囊支撑<small>8 INDEPENDENT ZONES</small></div></div>
@@ -65,12 +79,17 @@ document.querySelector('#app').innerHTML=`
           <button class="mechanism-button" id="mechanism-view" aria-pressed="false">${icon('layers')}查看电动床架${icon('arrow')}</button><div id="mechanism-readout" hidden><span>背部推杆 <b id="back-stroke">0 mm</b></span><span>腿部推杆 <b id="leg-stroke">0 mm</b></span><small>BZZ1-007 · 参考规格 160 × 190 cm<br>纵向保留 STEP 尺寸 · 行程为动画计算值</small><button class="text-button" id="deck-panels" aria-pressed="false">显示五段床板</button></div><button class="text-button" id="flat-reset">${icon('reset')}一键恢复平躺${icon('arrow')}</button>
         </div>
         <div id="pane-air" role="tabpanel" aria-labelledby="tab-air" class="pane" hidden>
-          <div class="section-label">分区支撑 <span>8 AIR ZONES</span></div>
-          <div class="side-select" role="group" aria-label="气囊调节侧"><button class="active" data-side="both">双侧同步</button><button data-side="left">左侧</button><button data-side="right">右侧</button></div>
-          <div class="air-map" aria-label="八气囊示意">${['L','R'].map((s,side)=>`<div class="air-column"><span>${s==='L'?'左侧 L':'右侧 R'}</span>${ZONES.map((z,i)=>`<div class="air-zone" id="zone-${side}-${i}"><i></i><b>${z.name}</b><small>50%</small></div>`).join('')}</div>`).join('')}</div>
+          <button class="auto-demo-button" id="auto-demo" aria-pressed="false">${icon('play')}<span><b>开始自动循环</b><small>左右气囊 → 腰腿加热 → 自动重复</small></span><em id="auto-demo-count">DEMO</em></button>
+          <div class="auto-demo-progress"><i></i></div><p id="auto-demo-status">一键看全套效果，也可随时手动调节。</p>
+          <div class="section-label">内部气囊 · 独立软硬调节 <span>AIR SUPPORT</span></div>
+          <div class="side-select" role="group" aria-label="气囊调节侧"><button class="active" data-side="left" aria-pressed="true">左侧独立</button><button data-side="right" aria-pressed="false">右侧独立</button><button data-side="both" aria-pressed="false">双侧同步</button></div>
+          <p class="air-instruction">点选部位或拖动滑杆：转向当前侧，扫描后调节。</p>
+          <div class="air-map" aria-label="八气囊示意">${['L','R'].map((s,side)=>`<div class="air-column"><span>${s==='L'?'左侧 L':'右侧 R'}</span>${ZONES.map((z,i)=>`<button class="air-zone" id="zone-${side}-${i}" data-air-side="${side}" data-air-zone="${i}" aria-label="${side===0?'左侧':'右侧'}${z.name}" aria-pressed="false"><i></i><b>${z.name}</b><small>50%</small></button>`).join('')}</div>`).join('')}</div>
+          <div class="air-control-label"><span id="air-control-label">左侧 · 四区独立</span><span>软 ← → 硬</span></div>
           <div class="air-sliders">${ZONES.map((z,i)=>`<div class="slider-block compact"><label for="pressure-${i}">${z.name}支撑 <output id="pressure-value-${i}">50<span>%</span></output></label><input id="pressure-${i}" data-pressure="${i}" type="range" min="0" max="100" value="50"/></div>`).join('')}</div>
-          <div class="toggle-row"><div>循环充放气<small>观察各区气囊与表面起伏</small></div><button class="switch" id="massage" role="switch" aria-checked="false" aria-label="循环充放气"><span></span></button></div>
-          <p class="fine-print">百分比表示演示充气量。左 / 右以床尾面向床屏的观察方向定义。</p>
+          <div class="heating-controls"><div class="section-label">气囊上层 · 腰腿加热 <span>THERMAL COMFORT</span></div>${HEAT_ZONES.map((region,i)=>`<div class="heat-control"><span>${region.name}<small>温热强度</small></span><div role="group" aria-label="${region.name}加热">${HEAT_LEVELS.map((label,level)=>`<button data-heat-region="${i}" data-heat-level="${level}" aria-label="${region.name}加热${label}" aria-pressed="${level===0}">${label}</button>`).join('')}</div></div>`).join('')}<p class="heat-control-note">当前侧独立设置；橙金色热纹显示在气囊上方。</p></div>
+          <div class="toggle-row"><div>循环演示当前分区<small id="cycle-region">左侧 · 腰部</small></div><button class="switch" id="massage" role="switch" aria-checked="false" aria-label="循环演示当前分区"><span></span></button></div>
+          <p class="fine-print">百分比和热档均为视觉演示。单独加热保留完整外观；左 / 右以床尾面向床屏定义。</p>
         </div>
         <div id="pane-structure" role="tabpanel" aria-labelledby="tab-structure" class="pane" hidden>
           <div class="section-label">由外到内，看见支撑 <span>3 ESSENTIAL LAYERS</span></div>
@@ -99,14 +118,17 @@ document.querySelector('#app').innerHTML=`
       <div class="panel-footer"><span class="live-dot"></span><span id="status-text">平躺姿态</span><span id="status-right">实时联动</span></div>
     </aside>
   </main>
-  <footer class="footer"><span>NOCTIS <i>/</i> 智能睡眠实验室</span><span class="footer-middle">让科技，安静地承托每一次休息。</span><div><button id="export-config">导出配置 ${icon('download')}</button><button id="export-model">导出模型 ${icon('download')}</button><span class="version">V.12</span></div></footer>
+  <footer class="footer"><span>NOCTIS <i>/</i> 智能睡眠实验室</span><span class="footer-middle">让科技，安静地承托每一次休息。</span><div><button id="export-config">导出配置 ${icon('download')}</button><button id="export-model">导出模型 ${icon('download')}</button><span class="version">V.13</span></div></footer>
   <div id="toast" role="status" aria-live="polite"></div>
 `;
 
 const $=(q)=>document.querySelector(q), $$=(q)=>[...document.querySelectorAll(q)];
-const target={back:0,leg:0,pressures:[[50,50,50,50],[50,50,50,50]],xray:0,explode:0};
+const target={back:0,leg:0,pressures:[[50,50,50,50],[50,50,50,50]],heating:[[0,0],[0,0]],xray:0,explode:0};
 const current=structuredClone(target);
-let activeSide='both', activePart='fabric', view='solid', massage=false, toastTimer, materialLibrary, bed, renderer, scene, camera, controls;
+let activeSide='left', activeZone=1, activePart='fabric', view='solid', massage=false, toastTimer, materialLibrary, bed, renderer, scene, camera, controls;
+let firmnessEffect, heatingEffect, firmnessSelection=null, firmnessFlight=null, firmnessUntil=0, cycleStarted=0, lastFirmnessUI=0,autoDemo=null,demoFrame=null;
+let airTransition=null,airReveal=sampleAirReveal(null,null,0),lastAirInput=0;
+const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 let needsRender=true,renderCount=0,lastModelUpdateMs=0,showDecks=false;
 let perspectiveCamera, orthographicCamera, cameraView='perspective';
 let cameraTarget=null, pendingLayerFocus=null, lastTime=0, dirty=true, lastPressureUI=0, rafId;
@@ -128,11 +150,13 @@ function initScene(){
   const key=new THREE.DirectionalLight(0xfff3df,3);key.position.set(2.0,5.5,3);key.castShadow=true;key.shadow.mapSize.set(1024,1024);key.shadow.camera.left=-3;key.shadow.camera.right=3;key.shadow.camera.top=3;key.shadow.camera.bottom=-3;key.shadow.normalBias=0.018;key.shadow.bias=-0.0002;scene.add(key);
   const fill=new THREE.DirectionalLight(0x8fceff,1.8);fill.position.set(-3,2.8,-2);scene.add(fill);
   const rim=new THREE.DirectionalLight(0x7ce4c8,1.8);rim.position.set(2,1,-3);scene.add(rim);
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:0x070c0e,metalness:0.10,roughness:0.85}));floor.rotation.x=-Math.PI/2;floor.position.y=-0.005;floor.receiveShadow=true;scene.add(floor);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:0x070c0e,metalness:0.10,roughness:0.85}));floor.name='Studio_Floor';floor.rotation.x=-Math.PI/2;floor.position.y=-0.005;floor.receiveShadow=true;scene.add(floor);
   const grid=new THREE.GridHelper(14,70,0x3a5357,0x243538);grid.material.transparent=true;grid.material.opacity=0.19;grid.position.y=0;scene.add(grid);
   const ring=new THREE.Mesh(new THREE.RingGeometry(1.81,1.815,160),new THREE.MeshBasicMaterial({color:0x659188,transparent:true,opacity:0.25,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=.006;scene.add(ring);
   const outerRing=new THREE.Mesh(new THREE.RingGeometry(1.86,1.861,160),new THREE.MeshBasicMaterial({color:0x45645d,transparent:true,opacity:.23,side:THREE.DoubleSide}));outerRing.rotation.x=-Math.PI/2;outerRing.position.y=.006;scene.add(outerRing);
   materialLibrary=new MaterialLibrary(renderer,()=>{needsRender=true;});bed=new SmartBed(materialLibrary);scene.add(bed.root);bed.setSurroundStyle('flush');applyCollection(DEFAULT_COLLECTION);bed.update(current);
+  firmnessEffect=new FirmnessEffect();scene.add(firmnessEffect.root);
+  heatingEffect=new HeatingEffect();scene.add(heatingEffect.root);
   updateDimensions();resize();new ResizeObserver(resize).observe(viewport);
   renderer.domElement.addEventListener('webglcontextlost',(e)=>{e.preventDefault();cancelAnimationFrame(rafId);toast('三维渲染已暂停，请刷新页面恢复');});
   $('#loading').classList.add('loaded');$('#loading').setAttribute('aria-hidden','true');requestAnimationFrame(animate);
@@ -141,7 +165,7 @@ function configureControls(target){
   controls?.dispose();controls=new OrbitControls(camera,renderer.domElement);controls.target.copy(target);
   controls.enableDamping=true;controls.dampingFactor=.07;controls.minDistance=1.1;controls.maxDistance=8;controls.minZoom=.6;controls.maxZoom=4;
   controls.minPolarAngle=camera.isOrthographicCamera?0:.05;controls.maxPolarAngle=camera.isOrthographicCamera?Math.PI/2:Math.PI/2-.035;controls.autoRotateSpeed=.65;
-  controls.addEventListener('start',()=>{cameraTarget=null;pendingLayerFocus=null;cameraView='orbit';$$('[data-camera]').forEach(b=>b.classList.remove('active'));$('#projection-label').textContent=camera.isOrthographicCamera?'正投影 · 自由观察':'REALTIME 3D';});
+  controls.addEventListener('start',()=>{stopAutoDemo();cameraTarget=null;firmnessFlight=null;pendingLayerFocus=null;cameraView='orbit';$$('[data-camera]').forEach(b=>b.classList.remove('active'));$('#projection-label').textContent=camera.isOrthographicCamera?'正投影 · 自由观察':'REALTIME 3D';});
 }
 function resize(){
   if(!renderer)return;const {width,height}=viewport.getBoundingClientRect(),aspect=width/height;renderer.setSize(width,height);
@@ -158,19 +182,52 @@ function updateDimensions(){
 function labelPosition(id,point,offsetX,offsetY){const p=point.project(camera),el=$(id);const {width,height}=viewport.getBoundingClientRect();el.style.left=`${(p.x*.5+.5)*width+offsetX}px`;el.style.top=`${(-p.y*.5+.5)*height+offsetY}px`;el.style.opacity=p.z<1&&!camera.isOrthographicCamera&&view!=='explode'&&view!=='mechanism'&&!(view==='headboard'&&id==='#label-air')?'1':'0';}
 function animate(ms){
   const dt=Math.min((ms-lastTime)/1000||0.016,0.05);lastTime=ms;const ease=1-Math.exp(-dt*7);let changed=dirty;dirty=false;
+  if(autoDemo){
+    demoFrame=sampleShowroomDemo((ms-autoDemo.started)/1000,target);
+    if(autoDemo.step!==demoFrame.index){
+      autoDemo.step=demoFrame.index;selectAirSide(demoFrame.selection.side);beginFirmness(demoFrame.selection.zone,true,demoFrame.selection.kind);
+      $('#auto-demo-count').textContent=`${demoFrame.index+1} / ${DEMO_STEPS.length}`;
+      $('#auto-demo-status').textContent=`第 ${demoFrame.cycle} 轮 · ${demoFrame.label}`;
+    }
+    $('.auto-demo-progress i').style.width=`${(demoFrame.index+demoFrame.phase)/DEMO_STEPS.length*100}%`;
+  }
+  const nextReveal=autoDemo?showroomDemoReveal(demoFrame,reducedMotion.matches):sampleAirReveal(firmnessSelection,airTransition,ms,reducedMotion.matches);
+  if(nextReveal.phase!==airReveal.phase||nextReveal.side!==airReveal.side)changed=true;
+  airReveal=nextReveal;bed.coverReveal.update(airReveal);
+  firmnessEffect.root.visible=!!firmnessSelection&&['scan','adjust','closing'].includes(airReveal.phase);
   for(const k of ['back','leg','xray','explode']){if(Math.abs(target[k]-current[k])>0.0002){current[k]+= (target[k]-current[k])*ease;changed=true;}}
   for(let s=0;s<2;s++)for(let z=0;z<4;z++){
-    const desired=massage?clamp(target.pressures[s][z]+30*Math.sin(ms*.0019-z*1.05+s*.65),0,100):target.pressures[s][z];
+    if(!airReveal.ready)continue;
+    const cycleTime=Math.max(0,ms-Math.max(cycleStarted,(airTransition?.start||0)+(airTransition?.flight||0)+REVEAL_TIMING.scan))/1000;
+    const desired=autoDemo?demoFrame.pressures[s][z]:desiredPressure(target.pressures,firmnessSelection,massage,s,z,cycleTime);
     if(Math.abs(desired-current.pressures[s][z])>.015){current.pressures[s][z]+=(desired-current.pressures[s][z])*ease;changed=true;}
   }
-  if(changed&&bed){const started=performance.now();bed.update({...current,mechanism:view==='mechanism',headboardOnly:view==='headboard',showDecks});lastModelUpdateMs=performance.now()-started;}
+  for(let s=0;s<2;s++)for(let z=0;z<2;z++){
+    const desired=(autoDemo?demoFrame:target).heating[s][z];
+    if(Math.abs(desired-current.heating[s][z])>.001){current.heating[s][z]+=(desired-current.heating[s][z])*ease;changed=true;}
+  }
+  if(changed&&bed){const started=performance.now();bed.update({...current,mechanism:view==='mechanism',headboardOnly:view==='headboard',showDecks,showroom:!!firmnessSelection,airReveal});lastModelUpdateMs=performance.now()-started;}
   if(pendingLayerFocus&&current.explode>.99){
     const bounds=new THREE.Box3().setFromObject(bed.anatomy.entries[pendingLayerFocus].group,true),center=bounds.getCenter(new THREE.Vector3());
     const distance=Math.max(2.5,bounds.getSize(new THREE.Vector3()).length()*.6/Math.sin(THREE.MathUtils.degToRad(camera.fov/2))*Math.max(1,1/camera.aspect));
     cameraTarget={position:center.clone().add(new THREE.Vector3(3.2,3.2,4.5).normalize().multiplyScalar(distance)),target:center};pendingLayerFocus=null;
   }
-  if(massage&&ms-lastPressureUI>150){updatePressureMap(current.pressures);lastPressureUI=ms;}
+  if(ms-lastPressureUI>150){if(autoDemo){updatePressureControls(current.pressures);updateHeatControls(demoFrame.heating);}else if(massage)updatePressureMap(current.pressures);lastPressureUI=ms;}
   if(cameraTarget){camera.position.lerp(cameraTarget.position,ease);controls.target.lerp(cameraTarget.target,ease);if(camera.position.distanceTo(cameraTarget.position)<.005)cameraTarget=null;}
+  if(firmnessFlight){
+    const flight=firmnessFlight,t=Math.min(1,(ms-flight.start)/REVEAL_TIMING.flight),k=t*t*(3-2*t);
+    controls.target.lerpVectors(flight.fromTarget,flight.toTarget,k);
+    const sphere=new THREE.Spherical(THREE.MathUtils.lerp(flight.from.radius,flight.to.radius,k),THREE.MathUtils.lerp(flight.from.phi,flight.to.phi,k),THREE.MathUtils.lerp(flight.from.theta,flight.to.theta,k));
+    camera.position.copy(controls.target).add(new THREE.Vector3().setFromSpherical(sphere));
+    needsRender=true;if(t===1)firmnessFlight=null;
+  }
+  const effectMoving=!!firmnessSelection&&!reducedMotion.matches&&(!!autoDemo||massage||!airReveal.ready||ms<firmnessUntil);
+  if(firmnessSelection&&(changed||needsRender||effectMoving||firmnessEffect.moving!==effectMoving)){
+    firmnessEffect.update({spine:bed.spine,pressures:current.pressures,selection:firmnessSelection,time:ms/1000,moving:effectMoving&&airReveal.ready});
+    heatingEffect.update({spine:bed.spine,heating:current.heating,pressures:current.pressures,time:ms/1000,moving:effectMoving});
+    firmnessEffect.moving=effectMoving;needsRender=true;
+  }
+  if(firmnessSelection&&ms-lastFirmnessUI>100){updateFirmnessHUD(ms);lastFirmnessUI=ms;}
   const cameraChanged=controls.update();
   if(changed||cameraChanged||cameraTarget||needsRender){
   if(changed)renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);renderCount++;needsRender=false;
@@ -189,7 +246,8 @@ function animate(ms){
   rafId=requestAnimationFrame(animate);
 }
 function setCamera(name){
-  pendingLayerFocus=null;cameraTarget=null;cameraView=name;
+  stopAutoDemo();
+  pendingLayerFocus=null;cameraTarget=null;firmnessFlight=null;cameraView=name;
   const next=['top','side'].includes(name)?orthographicCamera:perspectiveCamera;
   const oldTarget=controls.target.clone();
   if(next!==camera){camera=next;configureControls(oldTarget);}
@@ -205,6 +263,7 @@ function setCamera(name){
   $$('[data-camera]').forEach(b=>b.classList.toggle('active',b.dataset.camera===name));
 }
 function setView(name,syncTab=true){
+  endFirmness();
   const previous=view;
   view=name;target.xray=name==='xray'?1:0;target.explode=name==='explode'?1:0;
   bed.selectedLayer=null;$$('[data-layer]').forEach(b=>{b.classList.remove('active');b.setAttribute('aria-pressed','false');});dirty=true;
@@ -220,11 +279,12 @@ function setView(name,syncTab=true){
   $('#status-right').textContent=({solid:'实时联动',xray:'内部透视',explode:'三层展示',mechanism:'驱动机构',headboard:'独立床屏'})[name];
 }
 function activateTab(id,changeView=true){
+  if(id!=='air'&&firmnessSelection){endFirmness();setView('solid',false);}
   $$('[data-tab]').forEach(t=>{const active=t.dataset.tab===id;t.classList.toggle('active',active);t.setAttribute('aria-selected',String(active));});
   $$('.pane').forEach(p=>p.hidden=p.id!==`pane-${id}`);
   $('.panel-index').textContent=`/ 0${['pose','air','structure','material'].indexOf(id)+1}`;
   $('.panel-heading h2').textContent=id==='structure'?'三层结构，清晰呈现':'探索你的舒适区';
-  if(changeView){if(id==='air')setView('xray',false);else if(id==='structure')setView('explode',false);else if(id==='material')previewMaterial();else if(view==='explode')setView('solid',false);}
+  if(changeView){if(id==='air')beginFirmness(activeZone,false,'rest');else if(id==='structure')setView('explode',false);else if(id==='material')previewMaterial();else if(view==='explode')setView('solid',false);}
   if(id==='material')updateMaterialUI();
 }
 function setPreset(id){
@@ -236,12 +296,125 @@ function setPreset(id){
 function updatePressureMap(values=target.pressures){
   for(let s=0;s<2;s++)for(let z=0;z<4;z++){const el=$(`#zone-${s}-${z}`),v=Math.round(values[s][z]);el.style.setProperty('--pressure',v/100);el.querySelector('small').textContent=`${v}%`;}
 }
-function updatePressureControls(){
+function updatePressureControls(values=target.pressures){
   ZONES.forEach((_,i)=>{
-    const a=target.pressures[0][i],b=target.pressures[1][i],value=activeSide==='right'?b:activeSide==='left'?a:(a+b)/2;
+    const a=values[0][i],b=values[1][i],value=activeSide==='right'?b:activeSide==='left'?a:(a+b)/2;
     $(`#pressure-${i}`).value=value;paintRange($(`#pressure-${i}`));
     $(`#pressure-value-${i}`).innerHTML=activeSide==='both'&&a!==b?`${Math.round(a)} / ${Math.round(b)}<span>%</span>`:`${Math.round(value)}<span>%</span>`;
-  });updatePressureMap();
+  });updatePressureMap(values);
+}
+
+function selectAirSide(side) {
+  activeSide=side;
+  $$('[data-side]').forEach(el=>{const selected=el.dataset.side===side;el.classList.toggle('active',selected);el.setAttribute('aria-pressed',String(selected));});
+  $$('.air-column').forEach((el,s)=>el.classList.toggle('dimmed',!sideIndices(side).includes(s)));
+  $('#air-control-label').textContent=`${SIDE_NAMES[side]} · ${side==='both'?'同部位同步':'四区独立'}`;
+  updatePressureControls();
+  updateHeatControls();
+}
+
+function updateHeatControls(values=target.heating){
+  $$('[data-heat-level]').forEach(button=>{
+    const region=Number(button.dataset.heatRegion),level=Number(button.dataset.heatLevel);
+    const selected=sideIndices(activeSide).every(s=>Math.round(values[s][region])===level);
+    button.setAttribute('aria-pressed',String(selected));
+  });
+}
+
+function stopAutoDemo(){
+  if(!autoDemo)return;
+  const closing=airReveal.side&&airReveal.progress>0;
+  const closingSide=airReveal.side;
+  autoDemo=null;demoFrame=null;$('#auto-demo').setAttribute('aria-pressed','false');$('#stop-auto-demo').hidden=true;
+  $('#auto-demo b').textContent='开始自动循环';$('#auto-demo-count').textContent='DEMO';
+  $('#auto-demo-status').textContent='已停止，正在恢复手动设定。';$('.auto-demo-progress i').style.width='0%';
+  airTransition=closing?{closing:true,side:closingSide,start:performance.now()-(1-airReveal.progress)*REVEAL_TIMING.scan}:null;
+  if(closing)firmnessSelection={...firmnessSelection,kind:'exit'};
+  updatePressureControls();updateHeatControls();firmnessUntil=performance.now()+1500;dirty=true;
+}
+
+function toggleAutoDemo(){
+  if(autoDemo){stopAutoDemo();return;}
+  stopCycle();beginFirmness(0,false,'rest');autoDemo={started:performance.now(),step:-1};
+  $('#auto-demo').setAttribute('aria-pressed','true');$('#auto-demo b').textContent='停止自动循环';$('#stop-auto-demo').hidden=false;
+}
+
+function stopCycle() {
+  massage=false;$('#massage').setAttribute('aria-checked','false');updatePressureMap();
+}
+
+function beginFirmness(zone, animateEffect=true,kind='air') {
+  const previous=firmnessSelection,previousSide=previous?.side,now=performance.now();
+  if(!firmnessSelection){setView('solid',false);current.xray=0;current.explode=0;}
+  activeZone=zone;firmnessSelection={side:activeSide,zone,kind};
+  heatingEffect.root.visible=true;firmnessUntil=now+(animateEffect?4800:0);dirty=true;
+  $('.stage').classList.add('firmness-mode');
+  scene.getObjectByName('Studio_Floor').visible=false;
+  for(const selector of ['.firmness-heading','.firmness-hud','.firmness-caption-bar'])$(selector).hidden=false;
+  $('.firmness-hud').dataset.side=activeSide;
+  $('.firmness-hud').dataset.kind=kind;
+  $$('[data-air-zone]').forEach(el=>{const selected=isSelectedZone(firmnessSelection,Number(el.dataset.airSide),Number(el.dataset.airZone));el.classList.toggle('selected',selected);el.setAttribute('aria-pressed',String(selected));});
+  $$('[data-pressure]').forEach(el=>el.closest('.slider-block').classList.toggle('selected',kind==='air'&&Number(el.dataset.pressure)===zone));
+  $('#cycle-region').textContent=`${SIDE_NAMES[activeSide]} · ${ZONES[zone].name}`;
+  $('#firmness-announcement').textContent=`${SIDE_NAMES[activeSide]}${ZONES[zone].name}，${kind==='heat'?'上层加热':'内部气囊调节'}。`;
+  controls.autoRotate=false;$('#rotate').setAttribute('aria-pressed','false');pendingLayerFocus=null;cameraTarget=null;
+  const fly=kind!=='rest'&&(previousSide!==activeSide||cameraView!==`firmness-${activeSide}`);
+  if(fly){
+    const focus=firmnessCamera(activeSide,zone),oldTarget=controls.target.clone();
+    const fromPosition=camera.position.clone();
+    if(camera!==perspectiveCamera){camera=perspectiveCamera;camera.position.copy(fromPosition);configureControls(oldTarget);}
+    // Clear residual drag damping before starting a deterministic camera flight.
+    controls.enableDamping=false;controls.update();controls.enableDamping=true;
+    const from=new THREE.Spherical().setFromVector3(camera.position.clone().sub(controls.target));
+    const to=new THREE.Spherical(focus.radius,focus.polar,shortestAngle(from.theta,focus.azimuth));
+    const toTarget=new THREE.Vector3(...focus.target);
+    if(reducedMotion.matches){camera.position.copy(toTarget).add(new THREE.Vector3().setFromSpherical(to));controls.target.copy(toTarget);firmnessFlight=null;}
+    else firmnessFlight={start:now,fromTarget:controls.target.clone(),toTarget,from,to};
+    cameraView=`firmness-${activeSide}`;$$('[data-camera]').forEach(el=>el.classList.remove('active'));
+  }
+  if(kind==='air'&&!autoDemo){
+    if(!airTransition||previous?.kind!=='air'||previousSide!==activeSide||previous?.zone!==zone||now-lastAirInput>350){
+      airTransition={start:now,flight:reducedMotion.matches?0:firmnessFlight?Math.max(0,REVEAL_TIMING.flight-(now-firmnessFlight.start)):0};
+    }
+    lastAirInput=now;
+  }else airTransition=null;
+  airReveal=autoDemo&&demoFrame?showroomDemoReveal(demoFrame,reducedMotion.matches):sampleAirReveal(firmnessSelection,airTransition,now,reducedMotion.matches);
+  firmnessEffect.root.visible=['scan','adjust','closing'].includes(airReveal.phase);
+  $('#projection-label').textContent=`${SIDE_NAMES[activeSide]} · 分区调节`;
+  $('#status-right').textContent='独立分区控制';updateFirmnessHUD(performance.now());
+}
+
+function updateFirmnessHUD(ms) {
+  const side=SIDE_NAMES[activeSide],sides=sideIndices(activeSide),zone=firmnessSelection.zone;
+  const heat=firmnessSelection.kind==='heat',region=HEAT_ZONES.findIndex(r=>r.zone===zone),key=heat?'heating':'pressures',index=heat?region:zone;
+  const desired=autoDemo&&demoFrame?demoFrame:target;
+  const value=sides.reduce((sum,s)=>sum+current[key][s][index],0)/sides.length;
+  const values=sides.map(s=>Math.round(current[key][s][index]));
+  const targets=sides.map(s=>Math.round(desired[key][s][index]));
+  const settling=sides.some(s=>Math.abs(current[key][s][index]-desired[key][s][index])>(heat?.03:.5));
+  const phase=airReveal.phase==='camera'?'视角定位中':airReveal.phase==='scan'?'扫描当前侧':airReveal.phase==='closing'?'扫描恢复外观':firmnessSelection.kind==='rest'?'整床待命':autoDemo?'自动循环中':massage?'单区循环中':settling?'正在调节':ms<firmnessUntil?'调节已响应':'已设定';
+  $('#firmness-channel').textContent=({left:'LEFT CHANNEL',right:'RIGHT CHANNEL',both:'DUAL CHANNEL'})[activeSide];
+  $('#firmness-phase').textContent=phase;
+  $('#firmness-address').textContent=heat?'UPPER / 上层加热':'INNER / 内部气囊';
+  $('#firmness-name').textContent=`${side} · ${ZONES[zone].name}`;
+  $('#firmness-current').textContent=heat?[...new Set(values.map(v=>HEAT_LEVELS[v]))].join('/'):[...new Set(values)].join(' / ');
+  $('#firmness-unit').textContent=heat?'':'%';
+  $('#firmness-target').textContent=`${heat?'温热':'目标'} ${[...new Set(targets.map(v=>heat?HEAT_LEVELS[v]:`${v}%`))].join(' / ')}`;
+  $('#firmness-min').textContent=heat?'关闭':'偏软';$('#firmness-max').textContent=heat?'高档':'偏硬';
+  $('.firmness-meter i').style.width=`${heat?value/3*100:value}%`;
+  $('#heat-live-readout').textContent=HEAT_ZONES.map((r,i)=>`${r.name} ${[...new Set(sides.map(s=>HEAT_LEVELS[Math.round(current.heating[s][i])]))].join('/')}`).join(' · ');
+  $('#status-text').textContent=`${side}${ZONES[zone].name} · ${phase}`;
+}
+
+function endFirmness() {
+  if(!firmnessSelection)return;
+  stopAutoDemo();stopCycle();firmnessSelection=null;firmnessFlight=null;firmnessUntil=0;airTransition=null;
+  firmnessEffect.root.visible=heatingEffect.root.visible=false;$('.stage').classList.remove('firmness-mode');
+  scene.getObjectByName('Studio_Floor').visible=true;
+  $('#projection-label').textContent=camera.isOrthographicCamera?'正投影 · 自由观察':'REALTIME 3D';
+  $('#status-text').textContent='气囊手动调节';
+  for(const selector of ['.firmness-heading','.firmness-hud','.firmness-caption-bar'])$(selector).hidden=true;
+  dirty=true;
 }
 function updateMaterialUI(){
   const c=materialLibrary.config[activePart];$('#material-name').textContent=c.label;$('#material-description').textContent=({retainer:'通用软包挡板 · 随腿板联动',retainerLogo:'挡板正面压印 · 可替换透明标识图',brand:'床垫左侧品牌绣标 · 随围边贴合',modelMark:'床垫右侧型号绣标 · 随围边贴合',leather:HEADBOARD_STYLES[bed.headboardStyle]+' · 独立落地',waistband:'浅色罗纹织带 · 可独立换色',surround:'床邦与床尾 · 统一皮革',fabric:'可选绗缝与织纹',side:'围边花纹 · 自由搭配',piping:'勾勒床垫与床体轮廓',frame:'金属结构 · 精密支撑',foam:'三层结构 · 基础承托'})[activePart];
@@ -313,13 +486,28 @@ function bindUI(){
   });
   $('#flat-reset').addEventListener('click',()=>setPreset('flat'));
   $$('[data-camera]').forEach(b=>b.addEventListener('click',()=>setCamera(b.dataset.camera)));$('#reset-view').addEventListener('click',()=>setCamera('perspective'));
-  $('#rotate').addEventListener('click',()=>{if(camera.isOrthographicCamera)setCamera('perspective');controls.autoRotate=!controls.autoRotate;cameraTarget=null;$('#rotate').setAttribute('aria-pressed',String(controls.autoRotate));});
+  $('#rotate').addEventListener('click',()=>{stopAutoDemo();firmnessFlight=null;if(camera.isOrthographicCamera)setCamera('perspective');controls.autoRotate=!controls.autoRotate;cameraTarget=null;$('#rotate').setAttribute('aria-pressed',String(controls.autoRotate));});
   $$('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
-  $$('[data-side]').forEach(b=>b.addEventListener('click',()=>{activeSide=b.dataset.side;$$('[data-side]').forEach(t=>t.classList.toggle('active',t===b));$$('.air-column').forEach((col,i)=>col.classList.toggle('dimmed',(activeSide==='left'&&i===1)||(activeSide==='right'&&i===0)));updatePressureControls();}));
+  $$('[data-side]').forEach(b=>b.addEventListener('click',()=>{stopAutoDemo();stopCycle();selectAirSide(b.dataset.side);beginFirmness(activeZone,true,firmnessSelection?.kind||'rest');}));
+  $$('[data-air-zone]').forEach(b=>b.addEventListener('click',()=>{stopAutoDemo();stopCycle();selectAirSide(b.dataset.airSide==='0'?'left':'right');beginFirmness(Number(b.dataset.airZone));}));
   $$('[data-pressure]').forEach(input=>input.addEventListener('input',e=>{
-    const index=Number(e.target.dataset.pressure);for(let side=0;side<2;side++)if(activeSide==='both'||(activeSide==='left'&&side===0)||(activeSide==='right'&&side===1))target.pressures[side][index]=Number(e.target.value);updatePressureControls();
+    stopAutoDemo();stopCycle();const index=Number(e.target.dataset.pressure);
+    target.pressures=setZonePressure(target.pressures,activeSide,index,Number(e.target.value));
+    updatePressureControls();beginFirmness(index);
   }));
-  $('#massage').addEventListener('click',()=>{massage=!massage;$('#massage').setAttribute('aria-checked',String(massage));$('#status-text').textContent=massage?'气囊循环充放气':'气囊手动调节';if(massage)setView('xray');else updatePressureMap();});
+  $('#massage').addEventListener('click',()=>{
+    stopAutoDemo();
+    if(massage){stopCycle();firmnessUntil=performance.now()+1000;}
+    else{beginFirmness(activeZone);cycleStarted=performance.now();massage=true;$('#massage').setAttribute('aria-checked','true');}
+  });
+  $('#auto-demo').addEventListener('click',toggleAutoDemo);
+  $('#stop-auto-demo').addEventListener('click',stopAutoDemo);
+  $$('[data-heat-level]').forEach(button=>button.addEventListener('click',()=>{
+    stopAutoDemo();stopCycle();const region=Number(button.dataset.heatRegion);
+    target.heating=setHeatLevel(target.heating,activeSide,region,Number(button.dataset.heatLevel));
+    beginFirmness(HEAT_ZONES[region].zone,true,'heat');updateHeatControls();
+  }));
+  $('#exit-firmness').addEventListener('click',()=>setView('solid',false));
   $('#material-part').addEventListener('change',e=>{activePart=e.target.value;previewMaterial();updateMaterialUI();});
   $$('[data-color]').forEach(b=>b.addEventListener('click',()=>{materialLibrary.update(activePart,{color:b.dataset.color});custom();updateMaterialUI();}));
   $('#material-color').addEventListener('input',e=>{materialLibrary.update(activePart,{color:e.target.value});custom();updateMaterialUI();});
@@ -341,27 +529,43 @@ function bindUI(){
     out.toBlob(b=>{if(b){download(b,'NOCTIS-smart-bed.png');toast('模型视图已保存');}},'image/png');
   });
   $('#export-config').addEventListener('click',()=>{
-    const config={version:12,retainer:bed.cadFrame.retainer.userData,branding:bed.branding.map(m=>m.userData),modelView:view,showDecks,frameReference:'BZZ1-007-160X190.stp',dimensions:{mattress:DIMENSIONS,surround:bed.layout,headboard:bed.headboard.userData.dimensions},bedStyle:bed.surroundStyle,headboardStyle:bed.headboardStyle,waistband:bed.waistbandEnabled,surroundAccents:bed.surroundAccentsEnabled,collection:materialLibrary.collection,units:'meters',pose:{back:target.back,leg:target.leg},pressures:target.pressures,materials:materialLibrary.config,textureNote:'上传纹理记录为文件名，请将图片放入 public/textures 并在 materials.js 配置 URL。'};
+      const config={version:17,presentation:firmnessSelection?{mode:'integrated-side-scan',...firmnessSelection}:null,
+      heating:target.heating,heatingUnits:'visual-level-0-to-3',retainer:bed.cadFrame.retainer.userData,branding:bed.branding.map(m=>m.userData),modelView:view,showDecks,frameReference:'BZZ1-007-160X190.stp',
+      dimensions:{mattress:DIMENSIONS,surround:bed.layout,headboard:bed.headboard.userData.dimensions},bedStyle:bed.surroundStyle,headboardStyle:bed.headboardStyle,waistband:bed.waistbandEnabled,surroundAccents:bed.surroundAccentsEnabled,collection:materialLibrary.collection,units:'meters',
+      pose:{back:target.back,leg:target.leg},pressures:target.pressures,materials:materialLibrary.config,textureNote:'上传纹理记录为文件名，请将图片放入 public/textures 并在 materials.js 配置 URL。'};
     download(new Blob([JSON.stringify(config,null,2)],{type:'application/json'}),'NOCTIS-config.json');toast('配置已导出，纹理图片需单独保存');
   });
   $('#export-model').addEventListener('click',async()=>{
     const button=$('#export-model'),snapshots=[];button.disabled=true;toast('正在生成当前姿态的 GLB 模型…');
     try{
+      // GLB captures the physical model; shader-driven presentation stays in the viewer.
+      const showroom=!!firmnessSelection;
+      if(showroom)bed.update({...current,xray:0,showroom:false});
       const model=bed.root.clone(true),materialCopies=new Map();model.traverse(o=>{
         if(o.userData.rest)delete o.userData.rest;
         // Freeze geometry and material values while an asynchronous export encodes images.
-        if(o.geometry){o.geometry=o.geometry.clone();snapshots.push(o.geometry);}
+        if(o.geometry){o.geometry=o.geometry.clone();o.geometry.deleteAttribute('showroomPosition');snapshots.push(o.geometry);}
         if(o.material){const clone=m=>{if(!materialCopies.has(m)){const copy=m.clone();materialCopies.set(m,copy);snapshots.push(copy);}return materialCopies.get(m);};o.material=Array.isArray(o.material)?o.material.map(clone):clone(o.material);}
       });
+      if(showroom)bed.update({...current,showroom:true,airReveal});
       const data=await new GLTFExporter().parseAsync(model,{binary:true,onlyVisible:true,maxTextureSize:2048});
-      download(new Blob([data],{type:'model/gltf-binary'}),'NOCTIS-current-pose.glb');toast('当前姿态已导出，交互动画保留在 Three.js 源码中');
-    }catch(e){console.error(e);toast('模型导出失败，请重试');}finally{snapshots.forEach(item=>item.dispose());button.disabled=false;}
+      download(new Blob([data],{type:'model/gltf-binary'}),'NOCTIS-current-pose.glb');toast('当前姿态已导出，全息与交互动画保留在网页源码中');
+    }catch(e){console.error(e);toast('模型导出失败，请重试');}finally{snapshots.forEach(item=>item.dispose());button.disabled=false;dirty=true;}
   });
-  $$('input[type=range]').forEach(paintRange);updatePressureControls();
+  $$('input[type=range]').forEach(paintRange);selectAirSide(activeSide);
 }
 
-try{await prepareBrandArtwork();initScene();bindUI();}catch(error){console.error(error);$('#loading').innerHTML='<strong>无法启动 3D 视图</strong><span>请使用支持 WebGL 2 的浏览器，并开启图形加速后重试。</span>';}
+try{await prepareBrandArtwork();initScene();bindUI();$('.version').textContent='V.17';}catch(error){console.error(error);$('#loading').innerHTML='<strong>无法启动 3D 视图</strong><span>请使用支持 WebGL 2 的浏览器，并开启图形加速后重试。</span>';}
 
 // Read-only snapshots support integration checks without coupling tests to mesh ordering.
-window.noctis={getState:()=>structuredClone({target,current,view,massage,bedStyle:bed?.surroundStyle,headboardStyle:bed?.headboardStyle,waistband:bed?.waistbandEnabled,materials:materialLibrary?.config}),getDiagnostics:()=>({webgl:!!renderer,retainer:bed?.cadFrame.retainer.userData,branding:bed?.branding.map(m=>({name:m.name,visible:m.visible&&bed.mattress.visible})),bedStyle:bed?.surroundStyle,layout:bed?.layout,dimensions:DIMENSIONS,headboardDimensions:bed?.headboard.userData.dimensions,headboardStyle:bed?.headboardStyle,waistbandVisible:!!(bed?.waistband.visible&&bed?.mattress.visible),projection:camera?.type,cameraView,materialMaps:materialLibrary&&Object.fromEntries(Object.entries(materialLibrary.materials).map(([id,m])=>[id,{type:m.type,normal:!!m.normalMap,roughness:!!m.roughnessMap,width:m.map?.image?.width,height:m.map?.image?.height,anisotropy:m.map?.anisotropy}])),meshCount:bed?countMeshes(bed.root):0,drawCalls:renderer?.info.render.calls,renderCount,lastModelUpdateMs,triangles:renderer?.info.render.triangles,airbags:bed?.airbags.map(b=>({side:b.side,zone:b.zone,halfHeight:b.halfHeight,shape:b.cells[0].name,y:b.group.position.y})),coverBounds:bed?.cover.geometry.boundingSphere?.radius,selectedLayer:bed?.selectedLayer,anatomy:bed?.anatomy.layers.map(l=>({id:l.id,visible:bed.anatomy.entries[l.id].group.visible,meshes:countMeshes(bed.anatomy.entries[l.id].group)})),coverVisible:!!(bed?.cover.visible&&bed?.mattress.visible),headboardOnly:view==='headboard',showDecks,deckCount:bed?.decks.length,headboardVisible:bed?.headboard.visible,motors:bed?.linkage?.actuators.map(a=>({id:a.id,anchor:a.anchor,moving:a.moving,length:a.length,stroke:a.stroke,barrelLength:a.barrelLength,armAngle:a.armAngle,roller:a.roller,trackPosition:a.trackPosition})),collection:materialLibrary?.collection})};
+window.noctis={getState:()=>structuredClone({target,current,view,massage,activeSide,activeZone,firmnessSelection,bedStyle:bed?.surroundStyle,headboardStyle:bed?.headboardStyle,waistband:bed?.waistbandEnabled,materials:materialLibrary?.config}),getDiagnostics:()=>({webgl:!!renderer,retainer:bed?.cadFrame.retainer.userData,branding:bed?.branding.map(m=>({name:m.name,visible:m.visible&&bed.mattress.visible})),bedStyle:bed?.surroundStyle,layout:bed?.layout,dimensions:DIMENSIONS,headboardDimensions:bed?.headboard.userData.dimensions,headboardStyle:bed?.headboardStyle,waistbandVisible:!!(bed?.waistband.visible&&bed?.mattress.visible),projection:camera?.type,cameraView,cameraPosition:camera?.position.toArray(),cameraTarget:controls?.target.toArray(),firmness:{visible:!!firmnessEffect?.root.visible,selection:firmnessSelection,moving:!!firmnessEffect?.moving,flight:!!firmnessFlight,activeTiles:firmnessEffect?.entries.filter(e=>e.tile.material.uniforms.focus.value===1).map(e=>({side:e.side,zone:e.zone}))},materialMaps:materialLibrary&&Object.fromEntries(Object.entries(materialLibrary.materials).map(([id,m])=>[id,{type:m.type,normal:!!m.normalMap,roughness:!!m.roughnessMap,width:m.map?.image?.width,height:m.map?.image?.height,anisotropy:m.map?.anisotropy}])),meshCount:bed?countMeshes(bed.root):0,drawCalls:renderer?.info.render.calls,renderCount,lastModelUpdateMs,triangles:renderer?.info.render.triangles,airbags:bed?.airbags.map(b=>({side:b.side,zone:b.zone,halfHeight:b.halfHeight,shape:b.cells[0].name,y:b.group.position.y})),coverBounds:bed?.cover.geometry.boundingSphere?.radius,selectedLayer:bed?.selectedLayer,anatomy:bed?.anatomy.layers.map(l=>({id:l.id,visible:bed.anatomy.entries[l.id].group.visible,meshes:countMeshes(bed.anatomy.entries[l.id].group)})),coverVisible:!!(bed?.cover.visible&&bed?.mattress.visible),headboardOnly:view==='headboard',showDecks,deckCount:bed?.decks.length,headboardVisible:bed?.headboard.visible,motors:bed?.linkage?.actuators.map(a=>({id:a.id,anchor:a.anchor,moving:a.moving,length:a.length,stroke:a.stroke,barrelLength:a.barrelLength,armAngle:a.armAngle,roller:a.roller,trackPosition:a.trackPosition})),collection:materialLibrary?.collection})};
 function countMeshes(root){let n=0;root.traverse(o=>{if(o.isMesh)n++;});return n;}
+window.noctis.getShowroomState=()=>structuredClone({
+  automatic:!!autoDemo,step:demoFrame?.index??null,cycle:demoFrame?.cycle??null,label:demoFrame?.label??null,
+  airReveal,coverOpacity:bed?.coverReveal.uniforms.revealOpacity.value,
+  revealedSides:bed?.coverReveal.uniforms.revealSides.value.toArray(),
+  airVisible:!!bed?.airGroup.visible,visibleAirSides:bed?.airGroup.visible?[...new Set(bed.airbags.filter(b=>b.group.visible).map(b=>b.side))]:[],
+  comfortVisible:!!bed?.comfort.visible&&!!bed?.anatomy.entries.comfort.group.visible,
+  heatingVisible:!!heatingEffect?.root.visible,
+  heatPatches:heatingEffect?.entries.map(e=>({side:e.side,region:e.region,amount:e.mesh.material.uniforms.amount.value,waves:e.waves.visible}))
+});

@@ -1,12 +1,8 @@
 import { solveMechanism, LINKAGE } from './mechanism.js';
 import { DIMENSIONS, AIR_LAYOUT } from './dimensions.js';
+import { ZONES, DEFAULT_AIR_BAGS } from './air-layout.js';
 export { DIMENSIONS } from './dimensions.js';
-export const ZONES = Object.freeze([
-  { id: 'shoulder', name: '肩背', z: -0.60, spread: 0.21 },
-  { id: 'lumbar', name: '腰部', z: -0.17, spread: 0.145 },
-  { id: 'hip', name: '臀部', z: 0.19, spread: 0.17 },
-  { id: 'leg', name: '腿部', z: 0.63, spread: 0.21 },
-]);
+export { ZONES } from './air-layout.js';
 export const PRESETS = Object.freeze({
   flat: { name: '平躺', back: 0, leg: 0 },
   read: { name: '阅读', back: 52, leg: 10 },
@@ -53,19 +49,16 @@ export function sampleSpine(spine, s) {
   const a = spine.samples[i], b = spine.samples[i + 1];
   return { y: a.y + (b.y-a.y)*t, z: a.z + (b.z-a.z)*t, angle: a.angle + (b.angle-a.angle)*t };
 }
-export function surfaceLift(x, z, pressures) {
+export function surfaceLift(x, z, pressures, airbags=DEFAULT_AIR_BAGS) {
   let lift = 0;
-  for (let side = 0; side < 2; side++) {
-    const centerX = (side === 0 ? -1 : 1)*AIR_LAYOUT.centerX;
-    const across = Math.exp(-Math.pow((x - centerX) / AIR_LAYOUT.spreadX, 4));
-    ZONES.forEach((zone, i) => {
-      lift += 0.055 * clamp(pressures[side][i], 0, 100) / 100 * across * Math.exp(-Math.pow((z-zone.z)/zone.spread, 4));
-    });
+  for (const bag of airbags) {
+    lift += bag.maxLift * clamp(pressures[bag.side][bag.zone],0,100)/100
+      * Math.exp(-Math.pow((x-bag.x)/bag.spreadX,4)-Math.pow((z-bag.z)/bag.spread,4));
   }
   return lift;
 }
-export function mapPoint(spine, x, y, z, pressures, inflate = true) {
+export function mapPoint(spine, x, y, z, pressures, inflate = true, airbags=DEFAULT_AIR_BAGS) {
   const p = sampleSpine(spine, z);
-  const height = y + (inflate ? surfaceLift(x, z, pressures) * smooth(0.025, 0.20, y) : 0);
+  const height = y + (inflate ? surfaceLift(x, z, pressures,airbags) * smooth(0.025, 0.20, y) : 0);
   return { x, y: p.y + height * Math.cos(p.angle), z: p.z + height * Math.sin(p.angle) };
 }

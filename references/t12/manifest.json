@@ -1,0 +1,46 @@
+{
+  "files": [
+    {
+      "source": "用户上传产品图，2026-09-10",
+      "archived": "references/t12/product-reference.png",
+      "bytes": 883687,
+      "sha256": "3b37fef14f970b1cd01a3631882daba345e193895f202883f9035b8d4479706a"
+    },
+    {
+      "source": "用户高清产品图，2026-09-10",
+      "archived": "references/t12/product-reference-hd.png",
+      "bytes": 3014199,
+      "sha256": "f9169ecc50f701bf757831df65161268d2f126e49629efe6056dbb4799f2b5f5"
+    },
+    {
+      "source": "用户标注花纹和围边细节，2026-09-10",
+      "archived": "references/t12/detail-reference-annotated.png",
+      "bytes": 3320468,
+      "sha256": "83d05348a3343e60f2808713a6f697b740e6365346277d3a8c3ee1400fce5f07"
+    },
+    {
+      "source": "用户确认床面横缝、围边竖缝与斜向织纹，2026-09-10",
+      "archived": "references/t12/stitch-direction-reference.png",
+      "bytes": 4319932,
+      "sha256": "bcaa29d1e7b32629727c012249e4785afe06d3406e4788faff1211352e30066c"
+    },
+    {
+      "source": "用户标注正面及侧面Logo、拉手细节，2026-09-10",
+      "archived": "references/t12/logo-handle-reference.png",
+      "bytes": 3684178,
+      "sha256": "821a3ee6f70eb594395fe56789eb505cadabb8cfb1bdee0257993c08693674c3"
+    },
+    {
+      "source": "User supplied headboard detail and proportion reference, 2026-09-10",
+      "archived": "references/t12/headboard-reference.png",
+      "bytes": 3866166,
+      "sha256": "730a3b5236ad4e946cdcd129aa911add2f088d37ececdbb5e82f0e2906dd9cd7"
+    },
+    {
+      "source": "User supplied T12 massage airbag layout, 2026-09-10",
+      "archived": "references/t12/massage-layout-reference.png",
+      "bytes": 47453,
+      "sha256": "c64cad918c522e2874146c8c61d88949eb6b2bc0874b3f39cf6cf03111182528"
+    }
+  ]
+}

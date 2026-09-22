@@ -10,6 +10,7 @@ export const MATERIAL_CONFIG={
   surround:{label:'床邦与床尾皮革',color:'#a48d71',pattern:'grain',roughness:.68,metalness:0,repeat:[6,3],maps:{}},
   piping:{label:'床垫与床体包边',color:'#8e7c65',pattern:null,roughness:.78,metalness:0,repeat:[1,1],maps:{}},
   frame:{label:'金属床架',color:'#354046',pattern:null,roughness:.4,metalness:.7,repeat:[1,1],maps:{}},
+  deck:{label:'承托板表面',color:'#596367',pattern:null,roughness:.9,metalness:0,repeat:[1,1],maps:{}},
   foam:{label:'基础承托泡棉',color:'#d9d1bd',pattern:'foam',roughness:1,metalness:0,repeat:[2,2],maps:{}},
   retainer:{label:'床尾软包挡板',color:'#443d36',pattern:'grain',roughness:.82,metalness:0,repeat:[3,1],maps:{}},
   retainerLogo:{label:'挡板 DeRUCCI 标识',color:'#171410',pattern:'derucci',roughness:.94,metalness:0,repeat:[1,1],maps:{}},
@@ -17,8 +18,8 @@ export const MATERIAL_CONFIG={
   modelMark:{label:'床垫 T11+ 标识',color:'#e0dace',pattern:'t11',roughness:.83,metalness:0,repeat:[1,1],maps:{}},
 };
 export class MaterialLibrary{
-  constructor(renderer,invalidate=()=>{}){
-    this.invalidate=invalidate;this.config=structuredClone(MATERIAL_CONFIG);this.materials={};this.renderer=renderer;this.owned=new Set();this.collection='ivory';
+  constructor(renderer,invalidate=()=>{},{maxAnisotropy=16}={}){
+    this.maxAnisotropy=maxAnisotropy;this.invalidate=invalidate;this.config=structuredClone(MATERIAL_CONFIG);this.materials={};this.renderer=renderer;this.owned=new Set();this.collection='ivory';
     for(const [id,c]of Object.entries(this.config)){
       const urls={...c.maps};this.materials[id]=['leather','surround','retainer'].includes(id)
         ?new THREE.MeshPhysicalMaterial({name:id,color:c.color,roughness:c.roughness,metalness:0,clearcoat:.16,clearcoatRoughness:.48})
@@ -27,8 +28,19 @@ export class MaterialLibrary{
     }
   }
   get(id){return this.materials[id];}
+  setModelLabel(text){
+    const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256;
+    const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.font=text==='T12'?'400 165px Times New Roman, serif':'600 150px Arial, sans-serif';
+    if(text==='T12'){
+      // Fit the visible ink, not the full canvas; short labels otherwise shrink to a quarter width.
+      const m=ctx.measureText(text),height=m.actualBoundingBoxAscent+m.actualBoundingBoxDescent;
+      ctx.save();ctx.translate(64,32);ctx.scale(896/m.width,192/height);ctx.fillText(text,0,m.actualBoundingBoxAscent);ctx.restore();
+    }else{ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,512,128,950);}
+    const m=this.get('modelMark');this.release(m.map);m.map=new THREE.CanvasTexture(canvas);m.map.colorSpace=THREE.SRGBColorSpace;this.owned.add(m.map);m.needsUpdate=true;
+    this.config.modelMark.label=`床垫 ${text} 标识`;this.config.modelMark.pattern=null;this.config.modelMark.maps={};
+  }
   release(t){if(t&&this.owned.has(t)){t.dispose();this.owned.delete(t);}}
-  configureTexture(t,id){if(!t)return;t.repeat.set(...this.config[id].repeat);t.anisotropy=Math.min(16,this.renderer.capabilities.getMaxAnisotropy());this.owned.add(t);}
+  configureTexture(t,id){if(!t)return;t.repeat.set(...this.config[id].repeat);t.anisotropy=Math.min(this.maxAnisotropy,this.renderer.capabilities.getMaxAnisotropy());this.owned.add(t);}
   setPattern(id,pattern){
     if(pattern!==null&&!PATTERN_OPTIONS[id]?.includes(pattern))throw new Error('不适用于此部件的纹理');
     const m=this.get(id),c=this.config[id];

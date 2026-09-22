@@ -30,7 +30,7 @@ export function createCadFrame(root,frameMaterial,library){
  const base=group(assembly,'Stationary_Frame'),mechanismGroup=group(assembly,'Roller_Lift_Mechanism');
  const dark=new THREE.MeshStandardMaterial({color:0x252c30,roughness:.62,metalness:.25});
  const hardware=new THREE.MeshStandardMaterial({color:0x768589,roughness:.40,metalness:.65});
- const deckMaterial=new THREE.MeshStandardMaterial({color:0x596367,roughness:.9,metalness:0});
+ const deckMaterial=library.get('deck');
  add(base,'frontBase',frameMaterial,undefined,'Front_Tubular_Base');add(base,'rearBase',frameMaterial,undefined,'Rear_Tubular_Base');
  // The source has six 250 mm legs. Extend only the feet to retain the existing upholstered bed height.
  const legs=[];

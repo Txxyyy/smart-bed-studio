@@ -1,0 +1,30 @@
+{
+  "resourceVersion": "1.0.0",
+  "protocolVersion": 1,
+  "models": [
+    {
+      "id": "t11-plus",
+      "name": "T11+",
+      "revision": 2,
+      "status": "reference"
+    },
+    {
+      "id": "t12",
+      "name": "T12",
+      "revision": 8,
+      "status": "reference"
+    },
+    {
+      "id": "generic",
+      "name": "通用床垫",
+      "revision": 1,
+      "status": "generic"
+    }
+  ],
+  "sha256": "88156f58ba2eaefe960e99f5cf6311cf5d7afe8a373f4c30e4c12dc028286add",
+  "runtime": {
+    "webgl": 2,
+    "chromium": 111,
+    "safari": "16.4"
+  }
+}

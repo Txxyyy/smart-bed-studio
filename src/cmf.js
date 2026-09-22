@@ -1,9 +1,9 @@
 export const COLOR_SWATCHES=[
   ['暖瓷白','#f3eee4'],['珍珠灰','#dce0df'],['燕麦米','#d3c4aa'],['沙岩褐','#aa937b'],['摩卡棕','#71574b'],['焦糖棕','#a06e49'],['陶土橙','#b1785f'],['烟粉','#c5a29c'],['酒红','#713e49'],['鼠尾草','#96a08b'],['苔藓绿','#657463'],['森林绿','#365b4a'],['雾蓝','#8da5b0'],['深海蓝','#3e5770'],['靛青','#304957'],['灰紫','#8f8496'],['银灰','#a6acb0'],['石墨灰','#606b6e'],['暖黑','#363b3b'],['曜石黑','#242b2e'],
 ];
-export const PATTERNS={derucciAI:'DeRUCCI AI 标识',derucci:'DeRUCCI 标识',t11:'T11+ 型号标识',performance:'横向提花织纹',microMesh:'细菱网织',ribbon:'细罗纹织带',wave:'波浪绗缝',diamond:'菱格绗缝',channel:'纵向绗缝',honeycomb:'六角绗缝',herringbone:'人字织纹',plain:'细密针织',grid:'小方格绗缝',grain:'细纹皮革',pebble:'荔枝纹皮革',smooth:'柔光皮革',foam:'微孔泡棉'};
-export const PATTERN_OPTIONS={retainer:['grain','pebble','smooth'],brand:['derucciAI'],modelMark:['t11'],retainerLogo:['derucci'],fabric:['performance','wave','diamond','channel','honeycomb','herringbone','plain'],side:['microMesh','grid','channel','diamond','herringbone','plain'],waistband:['ribbon'],leather:['grain','pebble','smooth'],surround:['grain','pebble','smooth'],frame:[],foam:['foam'],piping:[]};
-export const HEADBOARD_STYLES={cushion:'双靠包软包',channel:'竖向分格软包'};
+export const PATTERNS={derucciAI:'DeRUCCI AI 标识',derucci:'DeRUCCI 标识',t11:'T11+ 型号标识',t12Rib:'T12 横向绗缝织纹',t12Border:'T12 交错斜织围边',t12Tape:'T12 上沿斜织围条',performance:'横向提花织纹',microMesh:'细菱网织',ribbon:'细罗纹织带',wave:'波浪绗缝',diamond:'菱格绗缝',channel:'纵向绗缝',honeycomb:'六角绗缝',herringbone:'人字织纹',plain:'细密针织',grid:'小方格绗缝',grain:'细纹皮革',pebble:'荔枝纹皮革',smooth:'柔光皮革',foam:'微孔泡棉'};
+export const PATTERN_OPTIONS={retainer:['grain','pebble','smooth'],brand:['derucciAI','derucci'],modelMark:['t11'],retainerLogo:['derucci'],fabric:['t12Rib','performance','wave','diamond','channel','honeycomb','herringbone','plain'],side:['t12Border','microMesh','grid','channel','diamond','herringbone','plain'],waistband:['ribbon','t12Tape'],leather:['grain','pebble','smooth'],surround:['grain','pebble','smooth'],frame:[],deck:[],foam:['foam'],piping:[]};
+export const HEADBOARD_STYLES={cushion:'双靠包软包',channel:'竖向分格软包',t12:'T12 双排软包'};
 export const DEFAULT_COLLECTION='indigoWeave';
 // Colors stay coordinated across the mattress, headboard, surround and tailored edge.
 export const COLLECTIONS=[

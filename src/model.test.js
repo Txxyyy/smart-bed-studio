@@ -14,6 +14,37 @@ const state={back:0,leg:0,pressures:[[50,50,50,50],[50,50,50,50]],xray:1,explode
 const bounds=obj=>new THREE.Box3().setFromObject(obj,true);
 const near=(a,b,tol=1e-6)=>assert.ok(Math.abs(a-b)<tol,`${a} != ${b}`);
 
+test('local reveal keeps the whole mattress and frame, reveals only the selected side, and restores for heating',()=>{
+  const materialsBefore=bed.cover.material;
+  for(const style of ['wide','flush']){
+    bed.setSurroundStyle(style);
+    for(const side of ['left','right']){
+      bed.update({...state,xray:0,back:65,leg:35,showroom:true,airReveal:{side,phase:'adjust',progress:1}});
+      assert.equal(bed.cover.visible,true);
+      assert.notEqual(bed.cover.material,materialsBefore);
+      assert.equal(bed.anatomy.entries.comfort.group.visible,false);
+      assert.equal(bed.airGroup.visible,true);
+      assert.deepEqual(bed.airbags.filter(b=>b.group.visible).map(b=>b.side),Array(4).fill(side==='left'?1:0));
+      assert.deepEqual(bed.coverReveal.uniforms.revealSides.value.toArray(),side==='right'?[0,1]:[1,0]);
+      assert.ok(bed.coverReveal.uniforms.revealOpacity.value>=.25&&bed.coverReveal.uniforms.revealOpacity.value<=.5);
+      assert.ok(bed.decks.every(d=>d.group.visible));
+      assert.equal(bed.base.visible,true);
+    }
+    bed.update({...state,xray:0,back:65,leg:35,showroom:true,airReveal:{side:null,phase:'closed',progress:0}});
+    assert.equal(bed.cover.material,materialsBefore);
+    assert.equal(bed.airGroup.visible,false);
+    assert.equal(bed.coverReveal.uniforms.revealOpen.value,0);
+    bed.update({...state,back:65,leg:35,showroom:false});
+    assert.equal(bed.cover.material,materialsBefore);
+    assert.equal(bed.airGroup.visible,true);
+    assert.ok(bed.decks.every(d=>d.group.visible));
+    assert.equal(bed.base.visible,true);
+    bed.update({...state,xray:0,showroom:true,airReveal:{sides:{left:{phase:'adjust',progress:1},right:{phase:'scan',progress:.4}}}});
+    assert.equal(bed.airbags.filter(b=>b.group.visible).length,8,'both human sides remain visible during an overlapping adjustment');
+  }
+  bed.setSurroundStyle('wide');bed.update(state);
+});
+
 test('surround encloses both sides and the foot while leaving the mechanism opening clear',()=>{
   bed.update(state);
   for(const [x,z] of [[-.85,0],[.85,0],[0,.996],[0,-.953]]){
@@ -302,7 +333,7 @@ test('actual mattress, surround and headboard bounds meet the 160 by 190 size co
     const cover=bounds(bed.cover),rim=bounds(bed.surroundShell),head=bounds(bed.headboard);
     const size=cover.getSize(new THREE.Vector3());near(size.x,1.60);near(size.z,1.90);near(size.y,.21);
     near(size.z/size.x,190/160);near(rim.max.x-rim.min.x,outerWidth);near(head.max.x-head.min.x,headWidth);
-    near(head.max.y,1.25);near(head.min.y,0);near(rim.max.z-cover.max.z,footExtra);
+    near(head.max.y,HEADBOARD_LAYOUT.height);near(head.min.y,0);near(rim.max.z-cover.max.z,footExtra);
     near((rim.max.x-cover.max.x),style==='wide'?.08:0);
     near((head.max.x-cover.max.x),style==='wide'?.11:.06);
     near(cover.getCenter(new THREE.Vector3()).x,head.getCenter(new THREE.Vector3()).x);
@@ -392,7 +423,7 @@ test('reference headboard has eight sculpted channels and preserves both fitted 
       const seam=sample(width*(i/8-.5)),left=sample(width*((i-.5)/8-.5)),right=sample(width*((i+.5)/8-.5));
       assert.ok((left+right)/2-seam>.008,`missing channel seam ${style}/${i}`);
     }
-    const size=bounds(bed.headboard);near(size.max.x-size.min.x,bed.layout.headboardWidth);near(size.max.y,1.25);near(size.min.y,0);
+    const size=bounds(bed.headboard);near(size.max.x-size.min.x,bed.layout.headboardWidth);near(size.max.y,HEADBOARD_LAYOUT.height);near(size.min.y,0);
     for(const x of [-.70,-.4,.4,.70])for(const y of [.40,.49,.58]){ray.ray.origin.set(x,y,0);const hit=ray.intersectObject(bed.headboard,true)[0];assert.ok(hit);const gap=-DIMENSIONS.length/2-hit.point.z;assert.ok(gap>.012&&gap<.045,`channel gap ${gap}`);}
     bed.root.traverseVisible(o=>{if(o.isMesh){const n=o.geometry.attributes.normal;for(let i=0;i<n.count;i++)near(Math.hypot(n.getX(i),n.getY(i),n.getZ(i)),1,.001);}});
   }

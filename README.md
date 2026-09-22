@@ -1,222 +1,236 @@
-# NOCTIS · 智能床 Three.js 交互模型 V.12
+# 智能床 3D 模型 · Flutter 集成
 
-## 工作空间入口
+本项目提供可嵌入现有 Flutter App 的智能床模型。App 设置产品型号后，模型加载对应外观、气囊结构和能力；App 将已解析的设备状态通过 Dart 接口传入，驱动气囊、加热、按摩、电动床与镜头动画。
 
-本项目于 2026-09-07 从已交付的 V.12 源码初始化。后续请直接打开本目录持续迭代，或在编辑器中打开 `smart-bed-studio.code-workspace`。
+**团队接入入口：`flutter/smart_mattress_viewer`。** 包内已包含离线模型资源，接入方无需启动网页服务器、安装 Node.js 或自行编写 JavaScript 桥接。
 
-- `src/`、`public/`：模型、交互与可替换纹理源码。
-- `references/`：原始参考照片、STEP 和来源校验清单。
-- `exports/baseline-v12/`：迁移时交付物快照，后续另建版本目录。
-- `docs/INITIALIZATION.md`：初始化与验证记录。
-- `AGENTS.md`：后续协作规则；`work/`：不入版本控制的临时资料。
+设备绑定、MQTT 收发、设备命令、算法和业务页面继续由现有 App 负责。模型接口只改变可视化，不向床垫发送硬件命令。示例按钮模拟设备状态，不能直接作为生产控制逻辑。
 
-开发启动：`npm ci` 后执行 `npm run dev`，使用终端打印的本地地址。构建后执行 `npm run preview` 查看 `dist/`。当前只初始化本地 Git，不配置远程仓库或发布。App 集成尚未实施。
+仓库：[Txxyyy/smart-bed-studio](https://github.com/Txxyyy/smart-bed-studio)（私有）。团队成员需要先获得仓库读取权限。
 
+```sh
+git clone https://github.com/Txxyyy/smart-bed-studio.git
+cd smart-bed-studio
+```
 
-包含可折弯床垫、独立气囊、双推杆电动床架、两种独立落地软包床屏与软包床邦。V.12 修复床垫四角的围边穿插和反面，统一上下包边及腰线与床垫表面的连接方式。V.11 将床尾铁架挡杆替换为通用品牌软包挡板，补齐床垫 DeRUCCI AI / T11+ 和挡板 DeRUCCI 标识。V.10 根据用户图片新增“暮蓝织序”搭配、横向提花织纹、细菱网织围边、浅色腰线和八格床屏，打开页面默认展示该方案。V.09 按用户提供的 BZZ1-007-160X190 STEP 名义规格，将床垫统一为 160 × 190 cm，分别匹配内嵌和齐边两种床邦的床屏宽度。保留 STEP 几何、三层展示、13 套搭配与独立落地双靠包床屏；新增正投影俯视、侧视和实时尺寸读数。
+## 1. 团队应该拿哪些文件
 
-## 体验与开发
+| 内容 | 位置 | 使用方式 |
+| --- | --- | --- |
+| Flutter 组件及离线模型 | `flutter/smart_mattress_viewer/` | 整目录复制到 App 的 `packages/` |
+| 可运行示例 | `flutter/smart_mattress_viewer/example/` | 先在目标设备验证，再接入业务页 |
+| 完整接入说明 | [FLUTTER_INTEGRATION.md](docs/FLUTTER_INTEGRATION.md) | 生命周期、状态同步、错误处理与发布 |
+| 底层模型接口 | [MODEL_SDK_API.md](docs/MODEL_SDK_API.md) | 区域 ID、参数、事件和扩展接口 |
+| 实际验证范围 | [VALIDATION.md](flutter/smart_mattress_viewer/VALIDATION.md) | 区分测试、模拟器与实机验收 |
 
-默认单文件为 `dist/index.html`，内嵌 Three.js、程序纹理与页面代码，无外部运行资源。浏览器需要 WebGL 2；也可通过本地 HTTP 服务访问。自动化验证采用 HTTP，未验证双击 `file:` 打开。
+建议团队固定经过验收的 Git commit 或组件交付版本，不直接随开发分支更新生产资源。仓库中的 `exports/` 是历史交付，最新代码以 `src/` 和 Flutter 组件目录为准。
 
-开发环境：Node.js 22.12+，本次使用 24.16.0。
+## 2. 接入现有 Flutter App
 
-```bash
+### 环境要求
+
+- 当前包声明 Flutter >=3.13、Dart >=3.1，依赖 `webview_flutter >=4.4.4 <5.0.0`；本次验证使用 Flutter 3.13.9 / Dart 3.1.5，不代表全部版本组合均已验证。
+- 支持 Android / iOS。模型必须能够创建 **WebGL 2**；构建基线为 Chromium 111+ / Safari 16.4+。
+- Android 示例 minSdk 24，开启硬件加速。请核对现有 App 的 Manifest 和目标设备实际 WebView 内核；Android 版本高不等于内核一定满足要求。
+- iOS 示例最低版本 16.4；现有 App 的 Runner 与 Podfile 部署目标需一致，执行 CocoaPods 安装。
+- 小米电视需要按具体型号和系统验证；该组件不替换电视 WebView 内核。Flutter Web/桌面端不属于当前封装范围。
+
+### 添加依赖
+
+复制整个组件目录后，App 目录形如：
+
+```text
+existing_app/
+  lib/
+  packages/
+    smart_mattress_viewer/
+      lib/
+      assets/
+      pubspec.yaml
+  pubspec.yaml
+```
+
+在 App 的 `pubspec.yaml` 添加：
+
+```yaml
+dependencies:
+  smart_mattress_viewer:
+    path: packages/smart_mattress_viewer
+```
+
+执行 `flutter pub get`。模型 assets 已由组件声明，App 不需要重复声明。不要只复制 Dart 文件，不要手动修改 `assets/mattress.html`。
+
+### 在业务页面放入模型
+
+下面的 Widget 可以作为现有设备详情页中的模型区域。`snapshot` 必须由 App 提供当前设备的完整状态；MQTT 增量订阅的接法见下一节。
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:smart_mattress_viewer/smart_mattress_viewer.dart';
+
+class BedModelPanel extends StatefulWidget {
+  const BedModelPanel({
+    super.key,
+    required this.modelId,
+    required this.snapshot,
+    required this.visible,
+  });
+  final String modelId;
+  final MattressState snapshot;
+  final bool visible;
+
+  @override
+  State<BedModelPanel> createState() => _BedModelPanelState();
+}
+
+class _BedModelPanelState extends State<BedModelPanel> {
+  final controller = MattressController();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 360,
+    child: MattressView(
+      controller: controller,
+      visible: widget.visible,
+      onReady: () async {
+        final session = await controller.setModel(widget.modelId);
+        await session.applySnapshot(widget.snapshot);
+      },
+      onResyncRequired: (session) async {
+        await session.applySnapshot(widget.snapshot);
+      },
+      onError: (error) {
+        debugPrint('Bed model: ${error.code}: ${error.message}');
+      },
+    ),
+  );
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+}
+```
+
+这个最小示例用于初始化和恢复同步，不会自动把每次 `snapshot` 属性变化推送给模型；实时上报应调用 `applyPatch`。父组件在切换设备或型号时给 `BedModelPanel` 设置新的 `ValueKey(deviceId + modelId)`，或使用下面的会话切换方式。Controller 在页面 State 中只创建一次，不要在 `build()` 内重新创建；模型容器必须有有限宽高。
+
+## 3. 把现有 MQTT 状态接到模型
+
+数据路径：设备 → App 现有 MQTT/业务状态层 → 转换为 `MattressState` → 固定型号会话 → 模型动画。
+
+1. 等待 `onReady`，再调用 `controller.setModel(modelId)`。
+2. 用 `applySnapshot` 提交完整状态，再接收 `applyPatch` 增量。
+3. 保留 App 自己的最新完整状态缓存；页面恢复、断线恢复和模型重载时重新同步。
+4. 切设备时取消旧订阅，再建立新会话；即使两台设备型号相同也要重新 `setModel`。
+
+以下是业务层连接示意，`initialSnapshot` 和 `parsedDeviceUpdates` 均由现有 App 提供，不是组件内置数据源：
+
+```dart
+final boundSession = await controller.setModel(deviceModel);
+await boundSession.applySnapshot(initialSnapshot);
+final subscription = parsedDeviceUpdates.listen((MattressState patch) async {
+  try {
+    await boundSession.applyPatch(patch);
+  } on MattressException catch (error) {
+    if (error.code != 'STALE_MODEL') {
+      // 接入现有错误处理；断序等情况需重新获取完整快照。
+    }
+  }
+});
+// 切换设备或销毁页面时：await subscription.cancel();
+```
+
+回调必须捕获固定的 `boundSession`，避免旧设备消息写进新设备。App 需要保证首次快照与订阅之间不丢消息，并维持增量顺序；如果启用 sequence，断序后重新同步，不直接删掉消息后沿用原序号。桥接会拒绝旧型号/旧页面会话，但不会替 App 判断设备编号。
+
+**数据含义：**完整快照缺省区域变为未知；增量缺省字段保持原值；显式 `null` 表示未知，`0` 是真实值。气囊展示量不默认等于 kPa，加热 0–3 是展示档位，不是摄氏温度，需由 App 做业务映射。
+
+## 4. 型号与接口使用
+
+左右统一按**人仰躺在床上时的左右侧**，不要按屏幕左右或站在床尾观察的左右传值。
+
+| 型号 ID | 支撑结构 | 调节区域 | 特有能力 |
+| --- | --- | --- | --- |
+| `T11+` / `t11-plus` | 单侧 7 囊，整床 14 囊 | 每侧 `shoulder` / `lumbar` / `hip`，对应 2/2/3 囊 | 三路调节，腰腿加热 |
+| `T12` / `t12` | 单侧 63 圆囊，整床 126 囊 | 每侧 `circuit1`…`circuit7` | 潮汐腰部映射、左右独立按摩 |
+| `generic` | 通用八囊 | 按 modelInfo 返回的区域 | 通用外观，无按摩 |
+
+从 `session.modelInfo` 读取 regions、heating、supportsMassage 和 supportsTidal，不硬编码所有型号的数量。T12 腰部选择 3/4/5 路，上方候选并入背部、下方并入臀部；左右独立。未知型号应由 App 明确选择通用配置，组件不会静默替代。
+
+下面假设已经获得一个 T12 的 `session`；各行是独立调用示例：
+
+```dart
+await session.setWaistCircuit(Side.left, 4);
+await session.setAirState(regionId: 'left.circuit4', value: 65,
+    status: AirStatus.inflating);
+await session.setAirState(regionId: 'left.circuit4', value: 30,
+    status: AirStatus.deflating);
+await session.setAirState(regionId: 'left.circuit4', value: 30,
+    status: AirStatus.idle);
+await session.setHeating(regionId: 'left.lumbar', level: 2,
+    status: HeatingStatus.heating);
+await session.setMassage(side: Side.right, status: MassageStatus.running,
+    intensity: 0.7, cycleSeconds: 9);
+await session.setPose(back: 20, leg: 10); // 设备实际角度
+await session.movePose(back: const PoseTarget(35, degreesPerSecond: 3));
+await session.focusSide(Side.left);
+await session.resetCamera(); // 只恢复镜头，不重置设备状态
+```
+
+`setPose` 用于实际角度上报，`movePose` 用目标角度与每秒角度驱动视觉过渡；两者都不发送设备命令。双侧气囊、加热、按摩和床体姿态可以叠加。`await` 成功表示请求已应用，不代表动画结束或硬件动作完成；动画完成需订阅 controller.events。
+
+## 5. 生命周期与异常处理
+
+- 非当前 Tab/PageView 页面时传 `visible: false`。App 前后台由组件处理，业务遮挡关系由 App 明确告知。
+- 恢复可见时，`onResyncRequired` 先提交最新完整快照，再恢复绘制；不要回放后台积压的历史动画。
+- 设备断线调用 `session.setDataAvailable(false)`；重新在线时提交带 `online: true` 的完整快照。设备离线与页面隐藏不是同一状态。
+- 页面重载后 `onReady` 会再次执行，重建会话及订阅；销毁时取消订阅并 dispose Controller。
+- `STALE_MODEL` / `STALE_INSTANCE`：丢弃旧回调；`RESYNC_REQUIRED` / `SNAPSHOT_REQUIRED`：补完整快照。
+- `REQUEST_TIMEOUT`：执行结果未知，不自动重复发送会重启动画的请求；查询状态或重新同步。
+- `UNSUPPORTED_RUNTIME`：检查 WebGL 2 与内核；不支持按摩/潮汐时按型号能力隐藏相应按钮。
+
+默认保留原画质与 RAF 刷新节奏，静止、后台和隐藏时停绘。App 不需要逐帧传动画值；请传状态、目标及速度。真实性能与温升取决于目标设备，详见 [性能说明](docs/PERFORMANCE.md)。
+
+## 6. 先运行示例，再做项目联调
+
+```sh
+cd flutter/smart_mattress_viewer
+flutter pub get
+flutter analyze
+flutter test
+cd example
+flutter pub get
+flutter run -d <设备ID>
+```
+
+示例包含型号选择、充放气、加热、双侧按摩、潮汐选择、电动床角度/速度、镜头和暂停绘制按钮。现有 App 无需复制示例 Android/iOS 工程配置；应将组件与示例调用适配到团队现有构建体系。
+
+交付前请在目标真机检查：首次离线加载、型号/设备切换、双侧效果叠加、前后台及 Tab 切换、断线恢复、页面反复创建销毁，以及持续运行的帧率和温升。门店电视还需要验证目标分辨率、遥控操作和实际 WebView 内核。
+
+本版已有 108 项 JS 测试、14 项 Flutter 测试、静态分析与构建记录；Android debug APK 构建成功，iOS 18.6 模拟器已验证型号切换与叠加效果。尚未完成 Android/iOS 真机、小米电视及真实 MQTT 联调；详情见[验证记录](flutter/smart_mattress_viewer/VALIDATION.md)。
+
+## 7. 模型维护与资源更新
+
+仅集成组件的同学无需执行以下 Node.js 命令；调整模型、材质或新增型号时才需要：
+
+```sh
+# Node.js 版本见 .nvmrc：24.16.0
 npm ci
-npm run dev
 npm test
 npm run build
+npm run build:flutter
 ```
 
-## 新增图片参考方案：暮蓝织序
+`build:flutter` 从源码生成离线 HTML，并同步到组件 `assets/`，同时生成协议版本、型号 revision 和 SHA-256 清单。更新模型后一起交付 Dart 包和 assets，保持版本兼容；不要只复制 dist 文件。现有离线包不提供在线代码热更新。
 
-默认以齐边款展示。也可在「材质定制」点击第一张“暮蓝织序”卡片，应用完整搭配；所有原有搭配继续保留。
-
-- 顶面为深靛蓝横向提花织纹，采用细密菱形纱线交织与低起伏横向条纹；新花纹可独立选择。
-- 围边为深蓝细菱网织；中部新增 26 mm 宽浅米色罗纹织带，上下细包边仍保留。
-- 床屏采用整片八格竖向软包、浅凹分缝、圆角包覆边框和独立落地支脚。分格来自实际曲面，不是把八个矩形叠放。
-- 床邦采用炭黑皮革，这套搭配关闭床邦的发光与浅色装饰线。
-
-在「床体姿态」可独立切换“双靠包软包 / 竖向分格软包”，并开关腰线；在「材质定制 → 选择部件 → 床垫腰线织带」可改色或替换贴图。选择原有搭配会恢复双靠包、不带腰线的对应方案；手动修改会退出整套搭配的选中状态。
-
-腰线顶点绑定到床垫实际三角面，随弯折和充放气一起变化；表面凸起约 1.0–1.4 mm。V.12 直接从床垫三角面裁出带面，不再让独立连接面横跨圆角；共享边界位置与平滑外法线，使上下包边和腰线保持连续。三层展开、独立床屏和机构视图不会残留腰线。顶部、围边与腰线仍分别使用 `fabric`、`side`、`waistband` 材质通道。
-
-顶面纹理 1024 × 1024、围边 2048 × 256、腰线 1024 × 64 像素；均在首次使用时生成并缓存。细织纹使用颜色、法线和粗糙度贴图表现，未增加纱线实体。图中图案、配色和软包结构用于视觉参考，程序材质并非产品扫描或厂家原始花版。房间背景不作为贴图；V.11 的品牌标识采用独立透明贴图。
-
-```js
-materials.applyCollection('indigoWeave');
-bed.setHeadboardStyle('channel');
-bed.setWaistband(true);
-bed.setSurroundAccents(false);
-bed.setSurroundStyle('flush');
-// 然后调用 bed.update(state)，照常使用角度和气囊参数。
-```
-
-配置 JSON 新增 `headboardStyle`、`waistband`、`surroundAccents`；版本号为 12，另记录通用挡板 `retainer` 和床垫标识 `branding`。网页的整套卡片同时应用这些造型设置，单独调用 MaterialLibrary 只更新材质。
-
-## V.12 四角贴合修复
-
-上下包边与中间腰线都从床垫的实际三角面中裁出，四角和折弯区的表面分界保持一致；绑定点共享平滑外法线。修复此前圆角处数毫米的穿插、小面翻转和局部断口。
-
-上下窄包边仍为约 4 mm 的参数宽度，表面偏移 0.65–0.9 mm；腰线参数宽度 26 mm，偏移 1.0–1.4 mm。三条带面各 864 个三角面，总数从 9600 降为 2592，减少约 73%。床垫、气囊、床架尺寸及品牌挡板不变。
-
-回归检查覆盖四角、上下边与腰线的连续闭环、面朝向、UV 接缝、平躺与多种折弯姿态、左右相反的充气极值。验证记录见 `VALIDATION.md`。
-
-## V.11 通用软包挡板与品牌标识
-
-- 原 `Mattress_Retaining_Bar` 不再实例化；齐边、内嵌及 13 套搭配均使用 `Upholstered_Brand_Retainer`。
-- 正面按照片做略拱上沿、圆角、烟褐皮革及细边缝；面板 300 × 96 × 20 mm。平躺时面板下沿离地 371 mm，上沿位于浅色腰线下方。尺寸由照片视觉比例适配到现有床垫，非厂家图纸值。
-- 两枚安装舌片连接小腿板；整个挡板刚性随板转动。齐边款收窄电动床架时反向补偿挡板的横向缩放，因此通用挡板仍为 300 mm 宽。
-- 左侧 DeRUCCI AI、右侧 T11+ 直接贴合围边；三角面绑定使它们随床垫弯曲、充气变化，离表面约 0.55 mm。在透视、三层展开、机构和独立床屏视图中按对应结构隐藏。
-- DeRUCCI 字形取自[慕思官网](https://us.derucci.com/)透明原始 PNG，详见 `BRAND_REFERENCE.md`；AI 方标和 T11+ 排列按用户照片重建。图片先解码一次并缩至 2048 px 中间画布，实际标识贴图为 1024 px 宽，不将原图巨大尺寸保留在显卡中。
-- 「材质定制」新增挡板、挡板字标、床垫品牌字标与型号字标四个独立部件。标识支持透明 PNG 更换；GLB 内嵌标识图片和 alpha mask。整套搭配会恢复通用烟褐挡板，并根据深浅围边选择可读的深 / 浅字色。
-
-独立挡板 GLB 以面板背面底部中心为原点，X 向右、Y 向上、Z 朝床尾外侧，隐藏安装件位于原点下方和后方。复用时将它挂到实际小腿板，按自身床垫厚度和板端位置调整安装点。
-
-## 三层结构与性能
-
-- 面料舒适层：将上层面料和舒适衬层合并展示。
-- 分区气囊层：左右各四块圆角矩形气囊，含阀口与热合封边。
-- 基础承托层：一层泡棉底托。
-
-「三层结构」自动放平后展开，点击某层可单独靠近查看。返回整床会恢复原来的姿态。V.03 的加热、传感器、控制板和多层底套网格已移除。
-
-细小结构降低细分数，花纹主要使用贴图表现；气囊影响权重预先计算。静止时不重新绘制三维画面，阴影仅在结构变化时刷新。默认像素比上限 1.35、阴影分辨率 1024。动态帧率依赖浏览器、窗口尺寸与硬件，具体测量见 `VALIDATION.md`。
-
-## 配色与花纹
-
-「材质定制」提供 13 套成套设计：暮蓝织序、云栖奶油、燕麦亚麻、鼠尾草、暖陶赤褐、可可摩卡、午夜靛蓝、玄岩银灰、雾蓝海盐、黑曜石、酒红暖金、焦糖马鞍、烟粉砂岩。
-
-每套同时设置床垫面料、围边、床屏、床邦与包边的颜色，以及对应花纹。选定整床方案后可继续单独修改；手动修改会退出整套方案选中状态。
-
-- 20 个快捷色，另有自定义颜色选择器。
-- 上层面料：横向提花织纹、波浪、菱格、纵向、六角绗缝，人字织纹、细密针织，共 7 种。
-- 围边：细菱网织、小方格、纵向、菱格绗缝，人字织纹、细密针织，共 6 种。
-- 床屏与床邦：细纹、荔枝纹、柔光皮革，共 3 种；两部分可独立配色和选纹理。
-- 可继续调整粗糙度、纹理重复，或上传 JPG / PNG / WebP 颜色、法线、粗糙度贴图。
-
-## 统一尺寸与两种床邦
-
-默认采用 STEP 文件的 160 × 190 cm 名义规格。床垫宽 1.60 m、长 1.90 m、未充气厚度 0.21 m，长宽比 1.1875。气囊、三层展开与包边同步匹配；切换款式不缩放床垫。
-
-| 尺寸 | 内嵌款 | 齐边款 |
-| --- | ---: | ---: |
-| 床垫宽 × 长 | 160 × 190 cm | 160 × 190 cm |
-| 床邦外宽 × 外长，不含独立床屏 | 176 × 199 cm | 160 × 191.5 cm |
-| 床屏宽 × 高 | 182 × 125 cm | 172 × 125 cm |
-| 两侧床邦各露出 | 8 cm | 0 cm |
-| 床尾床邦露出 | 7.5 cm | 0 cm |
-| 活动承托板宽 | 159 cm | 143 cm |
-| 背部铰轴离地 | 36 cm | 36 cm |
-
-齐边指两侧外沿与床尾对齐平躺床垫；床邦后端比床垫头端多 1.5 cm，因此床邦外长为 191.5 cm。两种床屏均独立落地，厚度另外计入整床占地，不能把床邦外长视作全部占地。
-
-内嵌款保留 STEP 承托板约 159 × 189 cm 的真实包络，纵向机构不再放大。齐边款只收窄横向底架与承托板，两款共用纵向销孔与连杆尺寸。V.11 以 300 × 96 × 20 mm 软包挡板替代原铁架挡杆；背面位于平躺床垫尾端外 4 mm，保持与小腿板的刚性联动。脚垫接地，支脚长度约 250 mm。
-
-右侧尺寸面板随款式更新，单独床屏视图也显示所选款的尺寸。俯视、侧视改为 OrthographicCamera，避免透视把较高的床屏放大；立体视角保留 PerspectiveCamera。两种相机支持拖动和缩放，复位返回立体视角。
-
-全部基础尺寸集中在 `src/dimensions.js`。这里的床屏、床邦和软包挡板安装位置是本次整床设计适配，未从 STEP 中读取；STEP 没有软包外床及床垫。详见 `PROPORTIONS.md`。
-
-切换不重置床垫角度、气囊或颜色。JSON 记录 `bedStyle`、`dimensions`、`frameReference`、`modelView`、`showDecks`；GLB 仅导出当前可见结构。
-
-## 床屏与驱动机构
-
-双靠包款床屏参考用户此前提供的落地床屏照片：内嵌款 1.82 m 宽、齐边款 1.72 m 宽，共同高度 1.25 m，包含完整背架、下部软包挡板、左右两条弧形翼边、两块独立的饱满靠包，以及自己的支脚和脚垫。靠包带弧形分缝，中央保留分体接缝。床屏皮革仍可独立换色和替换 PBR 贴图，各软包部件的纹理保持一致的物理尺度。
-
-床屏脚垫落在模型地面 Y = 0，脱离床垫、床邦和电动床架也能完整显示。点击「床体姿态 → 单独查看床屏」，可检查完整造型；再次点击「返回整床组合」恢复原来的姿态和床邦款式。在独立查看时导出 GLB，只包含床屏；配置 JSON 记录 `modelView: "headboard"`。
-
-床邦后端止于 Z = −0.965 m，位于落地挡板前方，避免原有后围边穿入挡板。两种床邦均检查了接合间隙和背部床板抬升避让。床垫接触区域保留小间隙，两块靠包之间的中央分缝属于独立结构。模型尺寸为展示参数，详见 `VALIDATION.md`。
-
-床架采用文件中的五段承托板、前后两组管材底架、六个支脚、两只短推杆、成对摆臂滚轮及小腿定长连杆。主要网格从 STEP 实际提取，移除重复紧固件和不可见构造面，并进行离线减面。`cad-data.js` 内嵌约 5.9 万个三角面，浏览器不加载 STEP 解析器。
-
-电机固定端连接底架叉耳，伸缩端推动独立摆臂；摆臂两端的滚轮沿床板底部支撑面滚动。摆臂铰轴与床板铰轴分开求解。床板角度改变时，滚轮保持接触，电机壳体不拉伸，只有伸缩杆沿轴线移动。小腿板受两根定长侧连杆约束。
-
-在「床体姿态」点击「查看电动床架」，隐藏床垫、床屏与床邦，保留安装于电动床的小型软包挡板；再点击「显示五段床板」可查看承托板与铰链。该视图支持姿态滑块、侧视与静态 GLB 导出。最大背部 65° 时计算行程约 123 mm，最大腿部 35° 时约 101 mm（均为静态 CAD 几何重建的计算值）。
-
-文件为静态装配，销孔位置来自 STEP，运动约束由几何关系重建；原件与适配尺寸的区别、测量值和验证范围见 `CAD_REFERENCE.md`、`VALIDATION.md`。
-
-## 近景材质与包边
-
-- 床屏和床邦使用物理材质、皮纹法线与独立粗糙度贴图，叠加较弱的表层反光。三种皮纹均为可重复的程序纹理，512 × 512 像素；默认重复 6 × 3，床屏正面纹理比例接近实际长宽比。
-- 围边采用 2048 × 256 横向贴图，细织纹与绗缝使用法线表现；床垫顶面为 1024 × 1024。各向异性过滤最高 16 倍，按设备能力自动限制。
-- 床垫上下包边改为约 4 mm 宽的贴面窄带。顶点绑定到床垫实际三角面，随充气、弯折一起移动；凸起最高约 1 mm。V.12 按床垫表面分割带面，修复转角穿插、朝向反转，并保留连续 UV。
-- 在「材质定制」选择部件，点击「放大查看材质」检查细节；用右上角复位按钮回到整床。支持继续滚轮放大与拖拽观察。
-
-这些是参考照片质感的程序材质，不是从产品实物扫描得到的贴图。真实产品的花纹、粒度和色差可通过下面的接口替换。
-
-## 永久替换材质
-
-将图片放入 `public/textures/`，编辑 `src/materials.js` 中 `MATERIAL_CONFIG` 的对应部件：
-
-```js
-leather: {
-  label: '床屏皮革', color: '#ffffff', pattern: 'grain',
-  roughness: 0.66, metalness: 0, repeat: [6, 3],
-  maps: {
-    map: './textures/headboard-color.jpg',
-    normalMap: './textures/headboard-normal.jpg',
-    roughnessMap: './textures/headboard-roughness.jpg',
-  },
-},
-```
-
-| 标识 | 对应部件 |
+| 目录 | 用途 |
 | --- | --- |
-| `fabric` | 床垫上层面料、展开舒适层 |
-| `side` | 床垫围边、舒适层侧边 |
-| `leather` | 床屏皮革 |
-| `surround` | 床邦与床尾皮革 |
-| `piping` | 床垫、双靠包床屏接缝及床邦包边 |
-| `waistband` | 床垫中部腰线织带，独立颜色与贴图 |
-| `retainer` | 通用床尾软包挡板皮革 |
-| `retainerLogo` | 挡板 DeRUCCI 字标 |
-| `brand` | 床垫正面左侧 DeRUCCI AI 标识 |
-| `modelMark` | 床垫正面右侧 T11+ 标识 |
-| `frame` | 金属床架 |
-| `foam` | 基础承托泡棉 |
+| `src/` | Three.js 模型、状态接口、型号配置与动画 |
+| `src/webview-bridge.js` | Flutter 消息桥接与调用隔离 |
+| `flutter/smart_mattress_viewer/` | 团队使用的 Dart 包、资源、示例和测试 |
+| `docs/` | 接入、接口、性能和历史说明 |
+| `references/` | 产品原始参考资料，保持原样 |
+| `exports/` | 历史交付，不反向同步源码 |
+| `work/` / `dist/` | 临时验证/构建输出，不作为源码编辑 |
 
-V.09 中 `leather` 仅控制床屏，床邦独立使用 `surround`。旧版的 `fiber` 与 `breathable` 材质已移除。
-
-颜色贴图使用 sRGB；法线和粗糙度使用线性空间，粗糙度读取绿色通道，法线采用 OpenGL 方向。上传颜色贴图会把基础颜色改为白色；上传法线会替代内置法线贴图。重新选择花纹或整床搭配会清除对应部件的上传贴图。
-
-页面上传仅在本次会话中有效，不发送服务器。配置 JSON 保存颜色、花纹标识、重复、粗糙度与图片文件名，图片应单独保留。通过源码 URL 加入图片后，请使用 `npm run dev` / `npm run preview`，分发时包含 `dist/` 中的纹理文件。
-
-## 模型复用
-
-```js
-import { MaterialLibrary } from './src/materials.js';
-import { SmartBed } from './src/model.js';
-import { prepareBrandArtwork } from './src/branding.js';
-
-await prepareBrandArtwork(); // 先解码内嵌品牌素材，无需联网
-
-const materials = new MaterialLibrary(renderer, () => { /* 按需渲染时标记需要重绘 */ });
-const bed = new SmartBed(materials);
-scene.add(bed.root);
-materials.applyCollection('sage');
-bed.setSurroundStyle('flush'); // wide 为内嵌款
-bed.update({
-  back: 28, leg: 24,
-  pressures: [[50, 65, 45, 50], [50, 50, 50, 50]],
-  xray: 0, explode: 0, mechanism: false,
-});
-```
-
-角度单位为度，背部 0–65°、腿部 0–35°。压力数组为 0–100 的演示充气量，先左后右，每侧为肩背、腰部、臀部、腿部；左右以床尾面向床屏定义。模型以米为单位，Y 向上，床屏在 Z 负方向。
-
-- `dimensions.js`：床垫、床邦、床屏、气囊横向尺寸。
-- `model.js`：整床、气囊变形、驱动件装配。
-- `cad-data.js`：来自 STEP 的离线精简网格数据。
-- `cad-frame.js`：五段床板、前后底架、双电机、摆臂及六脚装配。
-- `mechanism.js`：STEP 销孔中心、滚轮接触约束、推杆行程与小腿连杆求解。
-- `kinematics.js`：连续床垫弯曲；在刚性床板铰点附近采用平滑过渡。
-- `headboard.js`：落地背架、双靠包、翼边和独立支脚。
-- `upholstery.js`：包边的三角面绑定与随动。
-- `branding.js` / `brand-artwork.js`：通用挡板、贴面标识及内嵌官方字标素材。
-- `textures.js`：可重复皮纹、织纹、法线与粗糙度贴图。
-- `anatomy.js`：三层展示参数。
-- `cmf.js`：13 套配色、快捷色与花纹选项。
-- `materials.js`：程序贴图与外部材质接口。
-- `main.js` / `style.css`：界面、按需绘制、视角与导出。
-
-「保存视图」导出 PNG；「导出配置」导出 JSON；「导出模型」导出当前可见结构、姿态和材质的静态 GLB。GLB 不含 JavaScript 折弯与交互算法，动态效果请使用源码。
+网页开发使用 `npm run dev`：`/` 为展示控制页，`/?embed=1` 为纯模型，`/?studio=1` 为原设计工作台。历史材质、机构、导出及 V.12–V.19 说明保留在 [MODEL_HISTORY.md](docs/MODEL_HISTORY.md)。当前型号、区域与 App 左右定义以本 README 和接口文档为准。

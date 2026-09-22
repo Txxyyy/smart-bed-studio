@@ -1,20 +1,29 @@
+import { roundAirRow } from './air-shape.js';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { buildSpine, sampleSpine, mapPoint, ZONES } from './kinematics.js';
 import { createAnatomy } from './anatomy.js';
 import { createHeadboard, HEADBOARD_LAYOUT } from './headboard.js';
-import { createBoundWelt, updateBoundWelt } from './upholstery.js';
+import { createBoundWelt, updateBoundWelt, perimeterDistance } from './upholstery.js';
 import { solveMechanism } from './mechanism.js';
 import { createCadFrame } from './cad-frame.js';
-import { DIMENSIONS, AIR_LAYOUT, SURROUND_STYLES, SURROUND_HEIGHT } from './dimensions.js';
+import { DIMENSIONS, AIR_LAYOUT, SURROUND_STYLES, SURROUND_HEIGHT, TAILORED_COVER, T12_FRONT_MARKS } from './dimensions.js';
+import { DEFAULT_AIR_BAGS } from './air-layout.js';
+import { CoverReveal } from './cover-reveal.js';
+import { massagePadWeight, massagePulse } from './massage.js';
+import { T12_MASSAGE_LAYOUT, T12_SUPPORT_LAYOUT } from './dimensions.js';
+import { quiltValley } from './tailored-textile.js';
+import { createTailoredAttachments } from './tailored-attachments.js';
 import { createMattressBranding } from './branding.js';
 import { HEADBOARD_STYLES } from './cmf.js';
 export { SURROUND_STYLES } from './dimensions.js';
 
 const V = (x,y,z) => new THREE.Vector3(x,y,z);
+const sameValues=(a,b)=>a?.length===b.length&&b.every((value,i)=>value===a[i]);
 const metal = new THREE.MeshStandardMaterial({color:0xa3b0b1,metalness:0.9,roughness:0.25});
 const dark = new THREE.MeshStandardMaterial({color:0x141e20,metalness:0.5,roughness:0.45});
 const cyan = new THREE.MeshStandardMaterial({color:0x74e9d1,emissive:0x26bfa7,emissiveIntensity:1.8,roughness:0.35});
+for(const material of [metal,dark,cyan])material.userData.shared=true;
 
 function mesh(geometry, material, parent, name) {
   const m = new THREE.Mesh(geometry,material);m.castShadow=true;m.receiveShadow=true;m.name=name;parent.add(m);return m;
@@ -44,8 +53,8 @@ function perimeterTube(parent,name,width,length,centerZ,y,radius,tubeRadius,mate
   return mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points,true,'centripetal'),96,tubeRadius,4,true),material,parent,name);
 }
 
-function softBox(w,h,d,yCenter,mat,parent,name) {
-  const g=new THREE.BoxGeometry(w,h,d,12,3,96);const p=g.attributes.position;
+function softBox(w,h,d,yCenter,mat,parent,name,longSegments=96,widthSegments=12) {
+  const g=new THREE.BoxGeometry(w,h,d,widthSegments,3,longSegments);const p=g.attributes.position;
   const surfaceHeight=Float32Array.from({length:p.count},(_,i)=>p.getY(i)+yCenter);
   const radius=Math.min(.045,h*.38),inner=V(w/2-radius,h/2-radius,d/2-radius);
   for(let i=0;i<p.count;i++){
@@ -57,7 +66,11 @@ function softBox(w,h,d,yCenter,mat,parent,name) {
 }
 
 export class SmartBed {
-  constructor(library) {
+  constructor(library, {airbags=DEFAULT_AIR_BAGS,coverStyle='standard',massage=[]}={}) {
+    this.airLayout=airbags;
+    this.massageChannels=massage;this.massageWeights=new WeakMap();
+    this.massagePads=massage.flatMap(channel=>channel.pads.map((pad,row)=>({pad,channel,row})));
+    this.boundSurfaceVersions=new WeakMap();this.pouchDeformationCaches=new WeakMap();
     this.root=new THREE.Group();this.root.name='NOCTIS_SmartBed';this.lib=library;this.soft=[];this.decks=[];this.airbags=[];this.motors=[];this.deformationCaches=new WeakMap();
     const frame=library.get('frame'),leather=library.get('leather'),surroundMaterial=library.get('surround');
     this.piping=library.get('piping');
@@ -79,35 +92,86 @@ export class SmartBed {
     this.headboardStyle='cushion';this.headboardVariants={cushion:this.headboards};
     this.mattress=new THREE.Group();this.mattress.name='Flexible_Mattress';this.root.add(this.mattress);
     const top=library.get('fabric'),side=library.get('side');
-    this.cover=softBox(DIMENSIONS.width,DIMENSIONS.mattressHeight,DIMENSIONS.length,0.123,[side,side,top,side,side,side],this.mattress,'Continuous_Cover');this.soft.push(this.cover);
-    this.coverDetails=[createBoundWelt(this.cover,this.piping,true),createBoundWelt(this.cover,this.piping,false)];
+    const tailored=coverStyle==='tailored';this.coverStyle=coverStyle;
+    this.mattressHeight=tailored?TAILORED_COVER.height:DIMENSIONS.mattressHeight;
+    this.surfaceTop=TAILORED_COVER.bottom+this.mattressHeight;
+    this.cover=softBox(DIMENSIONS.width,this.mattressHeight,DIMENSIONS.length,TAILORED_COVER.bottom+this.mattressHeight/2,[side,side,top,side,side,side],this.mattress,'Continuous_Cover',tailored?TAILORED_COVER.quiltRows*4:96,tailored?48:12);this.soft.push(this.cover);
+    if(tailored){
+      const g=this.cover.geometry,p=g.attributes.position,uv=g.attributes.uv;
+      for(let i=0;i<p.count;i++){
+        const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
+        const fade=Math.min(1,Math.max(0,(DIMENSIONS.width/2-Math.abs(x))/.10))*Math.min(1,Math.max(0,(DIMENSIONS.length/2-Math.abs(z))/.07))*Math.min(1,Math.max(0,(y-(this.surfaceTop-.038))/.038));
+        const valley=quiltValley(x/DIMENSIONS.width+.5,z/DIMENSIONS.length+.5);
+        p.setY(i,y-TAILORED_COVER.quiltDepth*valley*fade);
+      }
+      // Continuous physical cloth coordinates across side faces and all four corners.
+      const radius=.045,perimeter=2*(DIMENSIONS.width+DIMENSIONS.length-4*radius)+2*Math.PI*radius;
+      const repeats=Math.round(perimeter/DIMENSIONS.length);
+      for(const group of g.groups)if([0,1,4,5].includes(group.materialIndex)){
+        const ids=new Set(Array.from({length:group.count},(_,i)=>g.index.getX(group.start+i)));
+        for(const id of ids){
+          let u=perimeterDistance(p.getX(id),p.getZ(id),DIMENSIONS.width,DIMENSIONS.length,radius)/perimeter*repeats;
+          // The rear face crosses the wrap; unwrap it locally instead of stretching one triangle.
+          if(group.materialIndex===5&&u<repeats/2)u+=repeats;
+          uv.setX(id,u);
+        }
+      }
+      this.cover.userData.rest=Array.from(p.array);g.computeVertexNormals();
+    }
+    this.coverMaterials=this.cover.material;
+    this.coverReveal=new CoverReveal(this.cover);
+    this.coverDetails=[createBoundWelt(this.cover,this.piping,true,tailored?{halfWidth:TAILORED_COVER.weltHalfWidth,rounded:true,physicalUV:true}:{}),createBoundWelt(this.cover,this.piping,false)];
     this.mattress.add(...this.coverDetails);
-    this.branding=createMattressBranding(this.cover,library);this.mattress.add(...this.branding);
+    this.tailoredDetails=[];
+    if(tailored){
+      this.tailoredDetails=[
+        createBoundWelt(this.cover,library.get('waistband'),true,{offsetFromTop:TAILORED_COVER.bandOffset,halfWidth:TAILORED_COVER.bandHalfWidth,rounded:true,waistband:true,physicalUV:true,name:'Tailored_Upper_Border_Tape'}),
+        createBoundWelt(this.cover,this.piping,true,{offsetFromTop:TAILORED_COVER.lowerWeltOffset,halfWidth:TAILORED_COVER.weltHalfWidth,rounded:true,physicalUV:true,name:'Tailored_Second_Black_Welt'}),
+        ...createTailoredAttachments(this.cover,library),
+      ];
+      for(const detail of this.tailoredDetails){detail.sourceMaterial=detail.material;detail.geometry.setAttribute('showroomPosition',detail.geometry.attributes.position.clone());}
+      this.mattress.add(...this.tailoredDetails);
+    }
+    this.branding=createMattressBranding(this.cover,library,tailored?T12_FRONT_MARKS:undefined);this.mattress.add(...this.branding);
     this.waistband=createBoundWelt(this.cover,library.get('waistband'),true,{waistband:true});this.mattress.add(this.waistband);this.waistbandEnabled=false;
     this.innerFoam=softBox(DIMENSIONS.width-.05,.035,DIMENSIONS.length-.05,.045,library.get('foam'),this.mattress,'Foundation_Foam');this.soft.push(this.innerFoam);
     this.airGroup=new THREE.Group();this.airGroup.name='Eight_Air_Zones';this.root.add(this.airGroup);
-    for(let sideIndex=0;sideIndex<2;sideIndex++) for(let zone=0;zone<4;zone++) {
-      const group=new THREE.Group();group.name=`Airbag_${sideIndex===0?'L':'R'}_${ZONES[zone].id}`;this.airGroup.add(group);
+    for(const definition of this.airLayout) {
+      const {side:sideIndex,zone,width,depth}=definition;
+      const group=new THREE.Group();group.name=`Airbag_${sideIndex===0?'L':'R'}_${definition.id}`;this.airGroup.add(group);
       const mat=new THREE.MeshStandardMaterial({color:sideIndex===0?0x40ae9a:0x4d91b8,roughness:0.58,metalness:0.04,emissive:sideIndex===0?0x08392e:0x092536,emissiveIntensity:0.25});
-      const depth=ZONES[zone].spread*1.80;
-      const cell=mesh(new RoundedBoxGeometry(AIR_LAYOUT.pouchWidth,.12,depth,2,.047),mat,group,'Rounded_Rectangular_Air_Pouch');
+      const cell=mesh(definition.shape==='round-array'?roundAirRow(width,depth):new RoundedBoxGeometry(width,.12,depth,2,Math.min(.047,width*.2,depth*.2)),mat,group,definition.shape==='round-array'?'Circular_Air_Array':'Rounded_Rectangular_Air_Pouch');
       cell.userData.rest=Array.from(cell.geometry.attributes.position.array);
       const sealMaterial=new THREE.MeshStandardMaterial({color:sideIndex===0?0x277f70:0x316480,roughness:.73,metalness:.05});
-      const seal=perimeterTube(group,'Heat_Sealed_Rectangular_Edge',AIR_LAYOUT.pouchWidth+.008,depth+.008,0,0,.052,.0025,sealMaterial);
+      const seal=definition.shape==='round-array'?mesh(roundAirRow(width,depth,7,true),sealMaterial,group,'Circular_Sealed_Edges'):perimeterTube(group,'Heat_Sealed_Rectangular_Edge',width+.008,depth+.008,0,0,.052,.0025,sealMaterial);
       seal.userData.rest=Array.from(seal.geometry.attributes.position.array);
       const valve=box(group,'Valve',0.037,0.028,0.05,0,0,0,metal,0.008);
-      this.airbags.push({group,cells:[cell],seal,valve,side:sideIndex,zone,mat,halfHeight:.057});
+      const showroomMat=new THREE.MeshStandardMaterial({color:sideIndex===0?0x165758:0x164355,emissive:sideIndex===0?0x0b5046:0x0b324e,emissiveIntensity:.3,roughness:.45,metalness:.18});
+      this.airbags.push({...definition,group,cells:[cell],seal,valve,side:sideIndex,zone,mat,showroomMat,halfHeight:.057});
     }
     this.tubes=[];
-    for(const x of [-0.10,0.10]) {
+    for(const x of (this.airLayout.some(b=>b.shape==='round-array')?[]:[-0.10,0.10])) {
       const g=new THREE.TubeGeometry(new THREE.LineCurve3(V(x,.07,-.75),V(x,.07,.76)),48,.0035,4,false);
       const tube=mesh(g,new THREE.MeshStandardMaterial({color:0x6dcbc0,roughness:.63}),this.airGroup,'Pneumatic_Manifold');
       tube.userData.rest=Array.from(g.attributes.position.array);this.tubes.push(tube);
     }
+    if(this.airLayout.some(b=>b.shape==='round-array')){
+      const colors=[0xff825f,0xeac94f,0x6ae8df,0x86d781,0xb492ec,0x69bde5,0xdd89d3];
+      for(const side of [0,1]){
+        const ids=[...new Set(this.airLayout.filter(b=>b.side===side).map(b=>b.regionId))];
+        ids.forEach((id,c)=>{
+          const rows=this.airLayout.filter(b=>b.regionId===id),sign=side?1:-1,lane=sign*(.018+c*.0065),inner=sign*.075;
+          const add=points=>{const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),32,.002,4,false),tube=mesh(g,new THREE.MeshStandardMaterial({color:colors[c],emissive:colors[c],emissiveIntensity:.25}),this.airGroup,`Circuit_${id}`);tube.userData.rest=Array.from(g.attributes.position.array);tube.userData.circuitSide=side;this.tubes.push(tube);};
+          add([V(lane,.085,T12_SUPPORT_LAYOUT.manifoldEndZ),V(lane,.085,T12_SUPPORT_LAYOUT.controlBayStartZ),V(lane,.085,rows[0].z+.035),V(inner,.085,rows[0].z)]);
+          for(const row of rows)add([V(inner,.085,rows[0].z),V(inner,.085,row.z+.008),V(sign*(Math.abs(row.x)-row.width/2),.085,row.z),V(sign*(Math.abs(row.x)+row.width/2-.025),.085,row.z)]);
+        });
+      }
+    }
     this.anatomy=createAnatomy({root:this.root,library,softBox,box,mesh,soft:this.soft,airGroup:this.airGroup,innerFoam:this.innerFoam});
+    this.comfort=this.anatomy.entries.comfort.group.children[0];this.comfortMaterials=this.comfort.material;
     this.selectedLayer=null;this.currentExplode=0;
     this.setSurroundStyle('wide');
-    this.root.userData={units:'meters',nominalMattress:[DIMENSIONS.width,DIMENSIONS.length,DIMENSIONS.mattressHeight],description:'Visual demonstrator. Procedural deformation is driven by src/kinematics.js.'};
+    this.root.userData={units:'meters',nominalMattress:[DIMENSIONS.width,DIMENSIONS.length,this.mattressHeight],description:'Visual demonstrator. Procedural deformation is driven by src/kinematics.js.'};
   }
   setSurroundStyle(id){
     const profile=SURROUND_STYLES[id];if(!profile)throw new Error('Unknown surround style');
@@ -129,71 +193,112 @@ export class SmartBed {
     this.surroundAccentsEnabled=!!enabled;
     for(const {group} of Object.values(this.surroundProfiles))for(const name of ['Continuous_Ambient_Reveal','Surround_Stitched_Edge'])group.getObjectByName(name).visible=this.surroundAccentsEnabled;
   }
-  deform(obj, spine, pressures, explode=0, inflate=true) {
+  deform(obj, spine, pressures, explode=0, inflate=true, massage=null) {
     const a=obj.geometry.attributes.position,rest=obj.userData.rest;
+    const pads=obj===this.cover?this.massagePads:[];
+    const lifts=pads.map(({channel,row})=>{const lane=massage?.[channel.id];return lane?T12_MASSAGE_LAYOUT.lift*lane.amount*lane.intensity*massagePulse(lane.phase,row,channel.pads.length):0;});
+    const values=obj===this.cover?lifts:inflate?this.airLayout.map(bag=>pressures[bag.side][bag.zone]):[];
     let cache=this.deformationCaches.get(obj);
-    if(!cache){
-      const weights=new Float32Array(a.count*8);
+    if(cache?.spine===spine&&cache.position===a&&cache.rest===rest&&cache.explode===explode&&cache.inflate===inflate&&sameValues(cache.values,values))return;
+    if(!cache||cache.position!==a||cache.rest!==rest)cache={};
+    // Support pressure never deforms the cover, and rigid tubes need no air weights.
+    if(inflate&&obj!==this.cover&&!cache.weights){
+      const weights=new Float32Array(a.count*this.airLayout.length);
       for(let i=0;i<a.count;i++){
         const x=rest[i*3],y=rest[i*3+1],z=rest[i*3+2],t=THREE.MathUtils.clamp((y-.025)/.175,0,1),fade=t*t*(3-2*t);
-        for(let side=0;side<2;side++)for(let zone=0;zone<4;zone++)weights[i*8+side*4+zone]=.00055*fade*Math.exp(-Math.pow((x-(side?1:-1)*AIR_LAYOUT.centerX)/AIR_LAYOUT.spreadX,4)-Math.pow((z-ZONES[zone].z)/ZONES[zone].spread,4));
+        this.airLayout.forEach((bag,k)=>{weights[i*this.airLayout.length+k]=bag.maxLift/100*fade*Math.exp(-Math.pow((x-bag.x)/bag.spreadX,4)-Math.pow((z-bag.z)/bag.spread,4));});
       }
-      cache={weights};this.deformationCaches.set(obj,cache);
+      cache.weights=weights;
+    }
+    let massageWeights=this.massageWeights.get(obj);
+    if(obj===this.cover&&!massageWeights){
+      massageWeights=Float32Array.from({length:a.count*pads.length},(_,k)=>{
+        const i=Math.floor(k/pads.length),pad=pads[k%pads.length].pad;
+        const fade=THREE.MathUtils.smoothstep(rest[i*3+1],this.surfaceTop-.07,this.surfaceTop-.008);
+        return fade*massagePadWeight(pad,rest[i*3],rest[i*3+2]);
+      });this.massageWeights.set(obj,massageWeights);
     }
     for(let i=0;i<a.count;i++){
       const f=THREE.MathUtils.clamp((rest[i*3+2]-spine.min)/spine.step,0,spine.count),j=Math.min(Math.floor(f),spine.count-1),t=f-j,p=spine.samples[j],q=spine.samples[j+1];
       const angle=p.angle+(q.angle-p.angle)*t;let height=rest[i*3+1];
-      if(inflate)for(let k=0;k<8;k++)height+=cache.weights[i*8+k]*pressures[k>>2][k%4];
+      if(obj===this.cover){for(let k=0;k<lifts.length;k++)height+=massageWeights[i*pads.length+k]*lifts[k];}
+      else if(inflate)this.airLayout.forEach((bag,k)=>{height+=cache.weights[i*this.airLayout.length+k]*pressures[bag.side][bag.zone];});
       a.setXYZ(i,rest[i*3],p.y+(q.y-p.y)*t+height*Math.cos(angle)+explode,p.z+(q.z-p.z)*t+height*Math.sin(angle));
     }
     a.needsUpdate=true;obj.geometry.computeVertexNormals();obj.geometry.computeBoundingBox();obj.geometry.computeBoundingSphere();
+    Object.assign(cache,{spine,position:a,rest,explode,inflate,values});this.deformationCaches.set(obj,cache);
   }
 
   deformAirPouch(obj,bag,spine,halfHeight,seal=false) {
-    const a=obj.geometry.attributes.position,rest=obj.userData.rest,centerX=(bag.side===0?-1:1)*AIR_LAYOUT.centerX;
+    const a=obj.geometry.attributes.position,rest=obj.userData.rest,centerX=bag.x;
+    const cache=this.pouchDeformationCaches.get(obj);
+    if(cache?.spine===spine&&cache.position===a&&cache.rest===rest&&cache.halfHeight===halfHeight&&cache.seal===seal)return;
     for(let i=0;i<a.count;i++) {
-      const y=.066+halfHeight+rest[i*3+1]*(seal?1:halfHeight/.06);
-      const p=mapPoint(spine,centerX+rest[i*3],y,ZONES[bag.zone].z+rest[i*3+2],null,false);
+      const y=bag.bottom+halfHeight+rest[i*3+1]*(seal?1:halfHeight/.06);
+      const p=mapPoint(spine,centerX+rest[i*3],y,bag.z+rest[i*3+2],null,false);
       a.setXYZ(i,p.x,p.y,p.z);
     }
     a.needsUpdate=true;obj.geometry.computeVertexNormals();obj.geometry.computeBoundingBox();obj.geometry.computeBoundingSphere();
+    this.pouchDeformationCaches.set(obj,{spine,position:a,rest,halfHeight,seal});
+  }
+  updateSurfaceBinding(detail){
+    const position=detail.surfaceBinding.cover.geometry.attributes.position,cache=this.boundSurfaceVersions.get(detail);
+    if(cache?.position===position&&cache.version===position.version)return;
+    updateBoundWelt(detail);this.boundSurfaceVersions.set(detail,{position,version:position.version});
   }
   update(state) {
     // Unfold only the display geometry in the exploded view; the user's pose values are preserved.
-    const spine=buildSpine(state.back*(1-state.explode),state.leg*(1-state.explode));this.spine=spine;this.currentExplode=state.explode;
+    const back=state.back*(1-state.explode),leg=state.leg*(1-state.explode);
+    if(!this.spine||this.spineBack!==back||this.spineLeg!==leg){this.spine=buildSpine(back,leg);this.spineBack=back;this.spineLeg=leg;}
+    const spine=this.spine;this.currentExplode=state.explode;
     const exploded=state.explode>.01,headOnly=!!state.headboardOnly;
+    const reveal=state.showroom?state.airReveal:null;
+    const visibleRevealSides=reveal?.sides?Object.entries(reveal.sides).filter(([,value])=>['scan','adjust','closing'].includes(value.phase)).map(([side])=>side):[];
+    const showingAir=visibleRevealSides.length>0||!!reveal&&['scan','adjust','closing'].includes(reveal.phase);
+    const showingCover=showingAir;
+    this.coverReveal.update(reveal);
+    this.cover.material=showingCover?this.coverMaterials.map(m=>this.coverReveal.material(m)):this.coverMaterials;
+    this.cover.renderOrder=showingCover?4:0;
     this.base.visible=this.mechanismGroup.visible=this.mattress.visible=!headOnly;
     this.decks.forEach(d=>{d.group.visible=!headOnly;});
-    this.cover.visible=!exploded&&!state.mechanism;this.coverDetails.forEach(m=>m.visible=!exploded&&!state.mechanism);
+    this.cover.visible=!exploded&&!state.mechanism;this.coverDetails.forEach(m=>m.visible=this.cover.visible);
     this.waistband.visible=this.waistbandEnabled&&this.cover.visible;
+    for(const detail of this.tailoredDetails){detail.visible=this.cover.visible;detail.material=showingAir?this.coverReveal.material(detail.sourceMaterial):detail.sourceMaterial;detail.renderOrder=showingAir?5:1;}
     this.branding.forEach(m=>{m.visible=this.cover.visible&&state.xray<.1;});
     Object.entries(this.headboards).forEach(([id,head])=>{head.visible=id===this.surroundStyle&&!exploded&&!state.mechanism;});this.surround.visible=!state.mechanism&&!headOnly;
     for(const layer of Object.values(this.anatomy.entries)){
       const inXray=['airbag','foundation'].includes(layer.id);
-      layer.group.visible=!headOnly&&!state.mechanism&&(exploded||state.xray>.01&&inXray)&&(!exploded||!this.selectedLayer||this.selectedLayer===layer.id);
+      layer.group.visible=!headOnly&&!state.mechanism&&(state.showroom?showingAir&&inXray:exploded||state.xray>.01&&inXray)&&(!exploded||!this.selectedLayer||this.selectedLayer===layer.id);
     }
     this.linkage=solveMechanism(state.back*(1-state.explode),state.leg*(1-state.explode));
     this.cadFrame.update(this.linkage,state);
     // Hidden anatomy is deformed when it becomes visible, keeping normal pose changes light.
-    this.soft.forEach(m=>{const id=m.userData.anatomyLayer;if(id?this.anatomy.entries[id].group.visible:m.visible)this.deform(m,spine,state.pressures,state.explode*(m.userData.explodeOffset||0),m.userData.inflate!==false);});
-    if(this.cover.visible)this.coverDetails.forEach(updateBoundWelt);
-    if(this.waistband.visible)updateBoundWelt(this.waistband);
-    this.branding.filter(m=>m.visible).forEach(updateBoundWelt);
+    this.soft.forEach(m=>{
+      const id=m.userData.anatomyLayer;
+      const lift=state.explode*(m.userData.explodeOffset||0);
+      if(id?this.anatomy.entries[id].group.visible:m.visible)this.deform(m,spine,state.pressures,lift,m.userData.inflate!==false,state.massage);
+    });
+    if(this.cover.visible)this.coverDetails.forEach(m=>this.updateSurfaceBinding(m));
+    if(this.cover.visible)this.tailoredDetails.forEach(m=>this.updateSurfaceBinding(m));
+    if(this.waistband.visible)this.updateSurfaceBinding(this.waistband);
+    this.branding.filter(m=>m.visible).forEach(m=>this.updateSurfaceBinding(m));
     const airOffset=this.anatomy.entries.airbag.offset;
-    if(this.airGroup.visible)this.tubes.forEach(t=>this.deform(t,spine,state.pressures,state.explode*airOffset,false));
+    this.tubes.forEach(t=>{t.visible=t.userData.circuitSide!==undefined?(!state.showroom||showingAir&&(visibleRevealSides.length?visibleRevealSides.includes(t.userData.circuitSide?'left':'right'):reveal?.side==='both'||reveal?.side===(t.userData.circuitSide?'left':'right'))):!state.showroom;if(this.airGroup.visible&&t.visible)this.deform(t,spine,state.pressures,state.explode*airOffset,false);});
+    this.airbags.forEach(bag=>{const humanSide=bag.side===1?'left':'right',requested=visibleRevealSides.length?visibleRevealSides.includes(humanSide):reveal?.side==='both'||bag.side===(reveal?.side==='left'?1:0);bag.group.visible=!state.showroom||showingAir&&requested;});
     if(this.airGroup.visible)for(const bag of this.airbags){
+      if(!bag.group.visible)continue;
       const pressure=THREE.MathUtils.clamp(state.pressures[bag.side][bag.zone]/100,0,1);
-      const p=sampleSpine(spine,ZONES[bag.zone].z),h=.025+pressure*.057;bag.halfHeight=h;
+      const p=sampleSpine(spine,bag.z),h=bag.minHalfHeight+pressure*bag.halfHeightRange;bag.halfHeight=h;
       bag.group.position.set(0,state.explode*airOffset,0);
-      bag.cells.forEach(cell=>this.deformAirPouch(cell,bag,spine,h));
+      bag.cells.forEach(cell=>{cell.material=state.showroom?bag.showroomMat:bag.mat;this.deformAirPouch(cell,bag,spine,h);});
       this.deformAirPouch(bag.seal,bag,spine,h,true);
-      const valve=mapPoint(spine,(bag.side===0?-1:1)*(AIR_LAYOUT.centerX-AIR_LAYOUT.valveOffset),.066+h,ZONES[bag.zone].z,null,false);
+      const valve=mapPoint(spine,bag.x+(bag.side===0?1:-1)*bag.width*.45,bag.bottom+h,bag.z,null,false);
       bag.valve.position.set(valve.x,valve.y,valve.z);bag.valve.rotation.x=p.angle;
       bag.mat.emissiveIntensity=.12+pressure*.3;
     }
-    const opacity=1-state.xray*0.90;
-    for(const id of ['fabric','side','waistband']){const m=this.lib.get(id),transparent=state.xray>0.005;if(m.transparent!==transparent){m.transparent=transparent;m.needsUpdate=true;}m.opacity=opacity;m.depthWrite=!transparent;}
-    this.cover.castShadow=state.xray<0.1;
+    const xray=state.showroom?0:state.xray,opacity=1-xray*0.90;
+    for(const id of ['fabric','side','waistband']){const m=this.lib.get(id),transparent=xray>0.005;if(m.transparent!==transparent){m.transparent=transparent;m.needsUpdate=true;}m.opacity=opacity;m.depthWrite=!transparent;}
+    this.cover.castShadow=xray<0.1;
     this.root.updateMatrixWorld(true);
   }
   getLayerAnchor(id){

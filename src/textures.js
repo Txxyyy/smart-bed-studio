@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { brandingMap } from './branding.js';
+import { tailoredTextile } from './tailored-textile.js';
 
 const cache=new Map();
 const clamp=(v)=>Math.max(0,Math.min(1,v));
@@ -9,8 +10,9 @@ const leatherPatterns=['grain','pebble','smooth'];
 export function proceduralMaps(pattern,part){
   if(!pattern)return {};
   if(['derucciAI','derucci','t11'].includes(pattern))return brandingMap(pattern);
-  const leather=leatherPatterns.includes(pattern),side=part==='side',ribbon=pattern==='ribbon',woven=['performance','microMesh'].includes(pattern);
-  const width=side?2048:leather?512:1024,height=side?256:ribbon?64:width,key=`${pattern}:${width}:${height}`;
+  const tailored=['t12Rib','t12Border','t12Tape'].includes(pattern);
+  const leather=leatherPatterns.includes(pattern),side=part==='side',ribbon=pattern==='ribbon',woven=tailored||['performance','microMesh'].includes(pattern);
+  const width=side||tailored?2048:leather?512:1024,height=side?(tailored?512:256):pattern==='t12Tape'?128:ribbon?64:width,key=`${pattern}:${width}:${height}`;
   if(!cache.has(key)){
     const heights=new Float32Array(width*height),colors=new Uint8Array(width*height),rough=new Uint8Array(width*height);
     const cells=pattern==='pebble'?52:88;
@@ -28,6 +30,8 @@ export function proceduralMaps(pattern,part){
         const depth=pattern==='smooth'?.16:1;
         h=.6-depth*(valley*.38+pore)+noise*.024;
         c=246-depth*valley*13+noise*4;r=219+valley*25+noise*7;
+      }else if(tailored){
+        const sample=tailoredTextile(pattern,u,v,noise);h=sample.height;c=sample.color;r=sample.roughness;
       }else if(woven){
         // Thread crossings form small diamonds; broad, low ribs run across the mattress width.
         const a=(u*(side?288:128)+v*(side?32:152)),b=(u*(side?288:128)-v*(side?32:152));
@@ -69,7 +73,7 @@ export function proceduralMaps(pattern,part){
     const colorCanvas=make(),normalCanvas=make(),roughCanvas=leather||woven?make():null;
     const colorContext=colorCanvas.getContext('2d'),normalContext=normalCanvas.getContext('2d'),roughContext=roughCanvas?.getContext('2d');
     const albedo=colorContext.createImageData(width,height),normal=normalContext.createImageData(width,height),roughness=roughContext?.createImageData(width,height);
-    const strength=leather?3.6:2.8;
+    const strength=leather?3.6:tailored?(pattern==='t12Rib'?4.5:6):2.8;
     for(let y=0;y<height;y++)for(let x=0;x<width;x++){
       const i=y*width+x,j=i*4;
       // The image Y axis is downward; glTF/Three.js tangent-space normal Y is upward.
