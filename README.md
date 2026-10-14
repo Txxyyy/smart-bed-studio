@@ -216,10 +216,11 @@ flutter run -d <设备ID>
 ```sh
 # Node.js 版本见 .nvmrc：24.16.0
 npm ci
-npm test
-npm run build
+npm run check          # lint + 格式检查 + 测试 + 构建
 npm run build:flutter
 ```
+
+代码格式由 Prettier 统一（`npm run format` 自动修正），ESLint 检查常见错误；GitHub Actions 在推送和 PR 上复核，并运行 Flutter analyze / test。
 
 `build:flutter` 从源码生成离线 HTML，并同步到组件 `assets/`，同时生成协议版本、型号 revision 和 SHA-256 清单。更新模型后一起交付 Dart 包和 assets，保持版本兼容；不要只复制 dist 文件。现有离线包不提供在线代码热更新。
 
