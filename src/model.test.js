@@ -1,35 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { SmartBed } from './model.js';
-import { MATERIAL_CONFIG } from './materials.js';
 import { ANATOMY_LAYERS } from './anatomy.js';
 import { LINKAGE, CAD_FIT } from './mechanism.js';
 import { RETAINER_SIZE, FRONT_MARKS } from './branding.js';
 import { DIMENSIONS, AIR_LAYOUT, HEADBOARD_LAYOUT, SURROUND_HEIGHT } from './dimensions.js';
-
-const materials = Object.fromEntries(
-  Object.keys(MATERIAL_CONFIG).map((id) => [
-    id,
-    new THREE.MeshStandardMaterial({
-      name: id,
-      side: id === 'waistband' ? THREE.DoubleSide : THREE.FrontSide,
-    }),
-  ]),
-);
-const bed = new SmartBed({ get: (id) => materials[id] });
-const state = {
-  back: 0,
-  leg: 0,
-  pressures: [
-    [50, 50, 50, 50],
-    [50, 50, 50, 50],
-  ],
-  xray: 1,
-  explode: 0,
-};
-const bounds = (obj) => new THREE.Box3().setFromObject(obj, true);
-const near = (a, b, tol = 1e-6) => assert.ok(Math.abs(a - b) < tol, `${a} != ${b}`);
+import { bed, state, bounds, near } from './model-test-fixture.js';
 
 test('local reveal keeps the whole mattress and frame, reveals only the selected side, and restores for heating', () => {
   const materialsBefore = bed.cover.material;
@@ -410,51 +386,6 @@ test('the headboard contact face leaves a small, consistent mattress gap in both
   bed.setSurroundStyle('wide');
 });
 
-test('raised mattress and rigid back deck remain in front of the fuller headboard', () => {
-  const point = new THREE.Vector3();
-  const ray = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, 0, -1));
-  for (const head of ['cushion', 'channel'])
-    for (const style of ['wide', 'flush']) {
-      bed.setHeadboardStyle(head);
-      bed.setSurroundStyle(style);
-      for (let back = 0; back <= 65; back += 5)
-        for (const pressure of [0, 100]) {
-          bed.update({
-            ...state,
-            back,
-            leg: 35,
-            xray: 0,
-            pressures: [
-              [pressure, pressure, pressure, pressure],
-              [100 - pressure, 100 - pressure, 100 - pressure, 100 - pressure],
-            ],
-          });
-          const objects = [bed.cover, ...bed.decks[0].group.children];
-          for (const object of objects) {
-            const p = object.geometry.attributes.position;
-            for (let i = 0; i < p.count; i++) {
-              point.fromBufferAttribute(p, i).applyMatrix4(object.matrixWorld);
-              if (
-                point.z > -DIMENSIONS.length / 2 + 0.1 ||
-                point.y < DIMENSIONS.deckHeight - 0.12 ||
-                point.y > HEADBOARD_LAYOUT.height
-              )
-                continue;
-              ray.ray.origin.set(point.x, point.y, 0.5);
-              const hit = ray.intersectObject(bed.headboard, true)[0];
-              if (hit)
-                assert.ok(
-                  point.z - hit.point.z > 0.005,
-                  `headboard collision ${style}/${back}/${pressure} ${object.name} gap=${point.z - hit.point.z}`,
-                );
-            }
-          }
-        }
-    }
-  bed.setHeadboardStyle('cushion');
-  bed.setSurroundStyle('wide');
-});
-
 test('independent headboard mode shows only its own structure and restores the complete bed', () => {
   const pose = { ...state, back: 52, leg: 10, xray: 0 };
   bed.setSurroundStyle('flush');
@@ -550,44 +481,6 @@ test('CAD assembly has five source panels, two base halves and six grounded legs
       triangles += (o.geometry.index?.count || o.geometry.attributes.position.count) / 3;
   });
   assert.ok(triangles < 65000, `CAD triangle budget exceeded: ${triangles}`);
-});
-
-test('the mattress underside clears all five imported panels throughout the angle range', () => {
-  const ray = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0)),
-    point = new THREE.Vector3();
-  const rest = bed.cover.userData.rest,
-    p = bed.cover.geometry.attributes.position;
-  for (const style of ['wide', 'flush']) {
-    bed.setSurroundStyle(style);
-    for (let back = 0; back <= 65; back += 5)
-      for (let leg = 0; leg <= 35; leg += 5) {
-        bed.update({
-          ...state,
-          back,
-          leg,
-          xray: 0,
-          pressures: [
-            [0, 0, 0, 0],
-            [100, 100, 100, 100],
-          ],
-        });
-        for (let i = 0; i < p.count; i++) {
-          if (rest[i * 3 + 1] > 0.02 || Math.abs(rest[i * 3]) > 0.72) continue;
-          point.fromBufferAttribute(p, i);
-          ray.ray.origin.set(point.x, 3, point.z);
-          const hit = ray.intersectObjects(
-            bed.decks.map((d) => d.panel),
-            false,
-          )[0];
-          if (hit)
-            assert.ok(
-              point.y - hit.point.y > -0.001,
-              `panel enters mattress ${style} ${back}/${leg}: ${point.y - hit.point.y}`,
-            );
-        }
-      }
-  }
-  bed.setSurroundStyle('wide');
 });
 
 test('actual mattress, surround and headboard bounds meet the 160 by 190 size contract', () => {
