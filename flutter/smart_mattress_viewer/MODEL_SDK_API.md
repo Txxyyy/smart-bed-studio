@@ -259,8 +259,8 @@ viewer.body.setState('left.hip', {value:60,status:'adjusting'}, {modelToken});
 
 ## 手机性能接口（2026-09-21）
 
-构造支持 `performanceMode: 'auto' | 'native' | 'eco' | 'balanced' | 'high'`（默认auto，所有设备native，保留原画质及屏幕刷新节奏）。运行时 `setPerformanceMode(mode)` 切换；`setVisible(false/true)` 与 App 页面生命周期对接；`getPerformanceStats()` 获取计数和档位。三者支持页面 JSON 分发。详细档位、后台停绘语义和验证限制见 [PERFORMANCE.md](PERFORMANCE.md)。
+构造支持 `performanceMode: 'auto' | 'native' | 'eco' | 'balanced' | 'high'`（默认auto，所有设备native，保留原画质及屏幕刷新节奏）。运行时 `setPerformanceMode(mode)` 切换；`setVisible(false/true)` 与 App 页面生命周期对接；`getPerformanceStats()` 获取计数和档位。三者支持页面 JSON 分发。详细档位、后台停绘语义和验证限制见 [PERFORMANCE.md](../../docs/PERFORMANCE.md)。
 
 ## Flutter 嵌入（1.0.0）
 
-新增 UI-free 的 embed.html、WebViewBridge 协议 v1 和 flutter/smart_mattress_viewer 组件包。独立入口先建立桥接，由 App 显式 setModel；model.presented 表示型号首帧已提交。旧 ?embed=1 保留 window.mattress / mattressDispatch 及型号查询参数。完整接入见 [FLUTTER_INTEGRATION.md](FLUTTER_INTEGRATION.md)。
+新增 UI-free 的 embed.html、WebViewBridge 协议 v1 和 flutter/smart_mattress_viewer 组件包。独立入口先建立桥接，由 App 显式 setModel；model.presented 表示型号首帧已提交。旧 ?embed=1 保留 window.mattress / mattressDispatch 及型号查询参数。完整接入见 [FLUTTER_INTEGRATION.md](INTEGRATION.md)。

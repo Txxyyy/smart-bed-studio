@@ -18,19 +18,29 @@
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run format)",
+      "Bash(npm run format:check)",
+      "Bash(npm run check)",
+      "Bash(npx eslint:*)",
+      "Bash(npx prettier:*)"
     ],
     "deny": [
       "Edit(dist/**)",
       "Edit(exports/baseline-v12/**)",
-      "Edit(references/**)",
-      "Edit(flutter/smart_mattress_viewer/assets/mattress.html)",
+      "Edit(flutter/smart_mattress_viewer/INTEGRATION.md)",
+      "Edit(flutter/smart_mattress_viewer/MODEL_SDK_API.md)",
       "Edit(flutter/smart_mattress_viewer/assets/manifest.json)",
+      "Edit(flutter/smart_mattress_viewer/assets/mattress.html)",
+      "Edit(references/**)",
       "Write(dist/**)",
       "Write(exports/baseline-v12/**)",
-      "Write(references/**)",
+      "Write(flutter/smart_mattress_viewer/INTEGRATION.md)",
+      "Write(flutter/smart_mattress_viewer/MODEL_SDK_API.md)",
+      "Write(flutter/smart_mattress_viewer/assets/manifest.json)",
       "Write(flutter/smart_mattress_viewer/assets/mattress.html)",
-      "Write(flutter/smart_mattress_viewer/assets/manifest.json)"
+      "Write(references/**)"
     ]
   },
   "hooks": {

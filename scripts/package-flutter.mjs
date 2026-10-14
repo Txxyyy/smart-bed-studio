@@ -22,4 +22,14 @@ await writeFile(
     2,
   ) + '\n',
 );
+// 包内文档由 docs/ 生成，只维护 docs/ 一份；包内没有的文档链接回仓库 docs/。
+const pkg = new URL('../flutter/smart_mattress_viewer/', import.meta.url);
+const docs = { 'MODEL_SDK_API.md': 'MODEL_SDK_API.md', 'FLUTTER_INTEGRATION.md': 'INTEGRATION.md' };
+for (const [source, target] of Object.entries(docs)) {
+  const text = await readFile(new URL(`../docs/${source}`, import.meta.url), 'utf8');
+  const linked = text.replace(/\]\(([A-Z0-9_]+\.md)\)/g, (match, name) =>
+    docs[name] ? `](${docs[name]})` : `](../../docs/${name})`,
+  );
+  await writeFile(new URL(target, pkg), linked);
+}
 console.log(`Flutter 模型资源已生成 (${Buffer.byteLength(html)} bytes)`);

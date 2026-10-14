@@ -16,8 +16,17 @@
 | Node | nvm 按 `.nvmrc` 切换 | 启动 hook 自动安装 `.nvmrc` 版本 |
 | 依赖 | `npm ci` | 启动 hook 执行 `npm install`（锁文件不变） |
 | `npm test` / `npm run build` / `npm run build:flutter` | 可运行 | 可运行 |
-| `flutter analyze` / `flutter test` / 示例构建 | 可运行 | 默认不可用，需注明未验证 |
+| `flutter analyze` / `flutter test` | 可运行 | 默认未安装，可手动安装 3.13.9 或以 CI 结果为准 |
+| 示例 Android/iOS 构建 | 可运行 | 不可用 |
 | 人工视觉检查、真机、模拟器 | 可做 | 不可做，仅能自动截图辅助 |
+
+## 提交前检查
+
+两端统一运行 `npm run check`（lint + 格式检查 + 测试 + 构建）；改了 `src/` 再运行 `npm run build:flutter`。代码格式由 Prettier 决定，不手工对齐；查看历史时可执行 `git config blame.ignoreRevsFile .git-blame-ignore-revs` 跳过纯格式化提交。
+
+GitHub Actions（`.github/workflows/ci.yml`）在 `main`、`claude/**` 推送和 PR 上运行上述检查，以及 Flutter 3.13.9 的 `flutter analyze` / `flutter test`。CI 通过不等于实机验收。
+
+`pubspec.lock` 中的 `url` 在本机为国内镜像 `pub.flutter-io.cn`；在其他网络执行 `flutter pub get` 若只改了 url，不要提交该变化。
 
 ## 分支与同步
 
@@ -28,7 +37,12 @@
 
 ## 生成文件
 
-`flutter/smart_mattress_viewer/assets/mattress.html` 与 `manifest.json` 由 `npm run build:flutter` 生成并入库。
+`npm run build:flutter` 生成并入库以下文件，均不手改：
+
+- `flutter/smart_mattress_viewer/assets/mattress.html`、`manifest.json`
+- `flutter/smart_mattress_viewer/MODEL_SDK_API.md`、`INTEGRATION.md`（分别由 `docs/MODEL_SDK_API.md`、`docs/FLUTTER_INTEGRATION.md` 复制，文档只改 docs/ 一份）
+
+CI 会重新生成并检查与提交内容一致，遗漏时 CI 失败。
 
 - 改了 `src/` 中影响嵌入模型的代码，同一提交内重新生成并提交这两个文件。
 - 发生合并冲突时不要手工合并：先解决 `src/` 冲突，再重新运行 `npm run build:flutter`，提交生成结果。
