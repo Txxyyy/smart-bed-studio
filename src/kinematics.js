@@ -1,6 +1,6 @@
 import { solveMechanism, LINKAGE } from './mechanism.js';
-import { DIMENSIONS, AIR_LAYOUT } from './dimensions.js';
-import { ZONES, DEFAULT_AIR_BAGS } from './air-layout.js';
+import { DIMENSIONS } from './dimensions.js';
+import { DEFAULT_AIR_BAGS } from './air-layout.js';
 export { DIMENSIONS } from './dimensions.js';
 export { ZONES } from './air-layout.js';
 export const PRESETS = Object.freeze({

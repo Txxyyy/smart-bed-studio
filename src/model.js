@@ -1,7 +1,7 @@
 import { roundAirRow } from './air-shape.js';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { buildSpine, sampleSpine, mapPoint, ZONES } from './kinematics.js';
+import { buildSpine, sampleSpine, mapPoint } from './kinematics.js';
 import { createAnatomy } from './anatomy.js';
 import { createHeadboard, HEADBOARD_LAYOUT } from './headboard.js';
 import { createBoundWelt, updateBoundWelt, perimeterDistance } from './upholstery.js';
@@ -9,7 +9,6 @@ import { solveMechanism } from './mechanism.js';
 import { createCadFrame } from './cad-frame.js';
 import {
   DIMENSIONS,
-  AIR_LAYOUT,
   SURROUND_STYLES,
   SURROUND_HEIGHT,
   TAILORED_COVER,

@@ -38,8 +38,8 @@ export function proceduralMaps(pattern, part) {
         const u = x / width,
           v = y / height,
           noise = hash(x, y) - 0.5;
-        let h = 0.5,
-          c = 245,
+        let h,
+          c,
           r = 242;
         if (leather) {
           const gx = u * cells,

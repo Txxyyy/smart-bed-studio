@@ -1,8 +1,8 @@
 import { roundAirRow } from './air-shape.js';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { AIR_LAYOUT, SHOWROOM_LAYOUT } from './dimensions.js';
-import { ZONES, mapPoint } from './kinematics.js';
+import { SHOWROOM_LAYOUT } from './dimensions.js';
+import { mapPoint } from './kinematics.js';
 import { DEFAULT_AIR_BAGS, humanSide } from './air-layout.js';
 import { isSelectedZone } from './firmness.js';
 

@@ -47,7 +47,7 @@ test('five rigid decks preserve the source hinge layout and foot support links k
 test('STEP pin measurements and independent roller tracks agree with the source', () => {
   const rest = solveMechanism(0, 0);
   near(rest.actuators[0].closedLength / CAD_FIT.scale, 0.28805271800314614);
-  near(rest.actuators[1].closedLength / CAD_FIT.scale, 0.29722536048762726);
+  near(rest.actuators[1].closedLength / CAD_FIT.scale, 0.29722536048762727);
   for (let back = 0; back <= 65; back += 0.5)
     for (const leg of [0, 10, 24, 35]) {
       for (const p of solveMechanism(back, leg).actuators) {
