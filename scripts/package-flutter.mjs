@@ -2,9 +2,24 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { ModelRegistry } from '../src/model-profiles.js';
 import { RESOURCE_VERSION, BRIDGE_VERSION } from '../src/webview-bridge.js';
-const html=await readFile(new URL('../dist/embed/embed.html',import.meta.url),'utf8');
-if(/(?:src|href)=["'](?:https?:|\/src\/)/.test(html))throw new Error('嵌入产物仍引用外部脚本或资源');
-const dir=new URL('../flutter/smart_mattress_viewer/assets/',import.meta.url);await mkdir(dir,{recursive:true});
-await writeFile(new URL('mattress.html',dir),html);
-await writeFile(new URL('manifest.json',dir),JSON.stringify({resourceVersion:RESOURCE_VERSION,protocolVersion:BRIDGE_VERSION,models:new ModelRegistry().list(),sha256:createHash('sha256').update(html).digest('hex'),runtime:{webgl:2,chromium:111,safari:'16.4'}},null,2)+'\n');
+const html = await readFile(new URL('../dist/embed/embed.html', import.meta.url), 'utf8');
+if (/(?:src|href)=["'](?:https?:|\/src\/)/.test(html))
+  throw new Error('嵌入产物仍引用外部脚本或资源');
+const dir = new URL('../flutter/smart_mattress_viewer/assets/', import.meta.url);
+await mkdir(dir, { recursive: true });
+await writeFile(new URL('mattress.html', dir), html);
+await writeFile(
+  new URL('manifest.json', dir),
+  JSON.stringify(
+    {
+      resourceVersion: RESOURCE_VERSION,
+      protocolVersion: BRIDGE_VERSION,
+      models: new ModelRegistry().list(),
+      sha256: createHash('sha256').update(html).digest('hex'),
+      runtime: { webgl: 2, chromium: 111, safari: '16.4' },
+    },
+    null,
+    2,
+  ) + '\n',
+);
 console.log(`Flutter 模型资源已生成 (${Buffer.byteLength(html)} bytes)`);
