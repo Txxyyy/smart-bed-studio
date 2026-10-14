@@ -3,7 +3,9 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { DIMENSIONS } from './dimensions.js';
 import { LINKAGE } from './mechanism.js';
 import { updateBoundWelt } from './upholstery.js';
-import { WORDMARK_IMAGE } from './brand-artwork.js';
+// DeRUCCI 字标取自 https://us.derucci.com/ (2026-09-07)，原始透明 PNG 未修改。
+// SHA-256 bacb8e21fbb32d585b9a8852ba9d27dca684e50dbe489f8b9f66f37f21824b3c；构建时由 Vite 内联为 data URL。
+const WORDMARK_IMAGE = new URL('./assets/derucci-wordmark.png', import.meta.url).href;
 
 let wordmarkImage;
 export async function prepareBrandArtwork() {

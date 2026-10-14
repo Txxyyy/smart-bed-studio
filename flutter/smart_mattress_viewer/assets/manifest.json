@@ -21,7 +21,7 @@
       "status": "generic"
     }
   ],
-  "sha256": "3c997d54eaa8880a373a049c1121feb2b2d35bc10c6d81743523919e7c0bac3e",
+  "sha256": "7b70250161f12cc101aad3198730eccd5a5842ea4e6a9805b8065d347e2f4a2d",
   "runtime": {
     "webgl": 2,
     "chromium": 111,

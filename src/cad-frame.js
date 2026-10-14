@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { CAD_MESHES } from './cad-data.js';
+// 网格数据由用户提供的 references/cad/BZZ1-007-160X190.stp 本地提取，位置精度 0.1 mm。
+import CAD_MESHES from './assets/cad-meshes.json' with { type: 'json' };
 import { ACTUATORS, CAD_FIT, LINKAGE, cadPoint, solveMechanism } from './mechanism.js';
 import { createUpholsteredRetainer } from './branding.js';
 

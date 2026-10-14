@@ -3,16 +3,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: [
-      'dist/',
-      'work/',
-      'exports/',
-      'references/',
-      'flutter/',
-      'node_modules/',
-      'src/cad-data.js',
-      'src/brand-artwork.js',
-    ],
+    ignores: ['dist/', 'work/', 'exports/', 'references/', 'flutter/', 'node_modules/'],
   },
   js.configs.recommended,
   {
