@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(npm ci)",
+      "Bash(npm install)",
+      "Bash(npm test)",
+      "Bash(npm test:*)",
+      "Bash(npm run build)",
+      "Bash(npm run build:flutter)",
+      "Bash(npm run dev)",
+      "Bash(node --test:*)",
+      "Bash(node --check:*)",
+      "Bash(flutter analyze)",
+      "Bash(flutter test)",
+      "Bash(flutter pub get)",
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git fetch:*)"
+    ],
+    "deny": [
+      "Edit(dist/**)",
+      "Edit(exports/baseline-v12/**)",
+      "Edit(references/**)",
+      "Edit(flutter/smart_mattress_viewer/assets/mattress.html)",
+      "Edit(flutter/smart_mattress_viewer/assets/manifest.json)",
+      "Write(dist/**)",
+      "Write(exports/baseline-v12/**)",
+      "Write(references/**)",
+      "Write(flutter/smart_mattress_viewer/assets/mattress.html)",
+      "Write(flutter/smart_mattress_viewer/assets/manifest.json)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

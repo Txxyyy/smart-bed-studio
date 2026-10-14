@@ -21,4 +21,6 @@
 
 - Flutter 包在 flutter/smart_mattress_viewer；npm run build:flutter 从 embed.html / src/embed-app.js 生成包内离线 HTML 和版本清单，不手改 assets/mattress.html。桥接协议在 src/webview-bridge.js，白名单共用 src/model-dispatch.js；Dart session 必须固定 instanceId/modelToken，页面重载和同型号换设备都使旧会话失效。调用回执与动画完成分开。Flutter 修改运行 flutter analyze / flutter test；示例 Android/iOS 构建与目标实机验收分开记录。
 
-- Git 远程仓库固定为 https://github.com/Txxyyy/smart-bed-studio.git（私有），origin 指向该仓库；主分支 main。当前项目不是公开的 3D_Electric_Bed 仓库。Codex 在此目录继续工作时使用已有 origin，不重复创建或修改全局默认仓库。推送仍以用户授权范围为准。
+- Git 远程仓库固定为 https://github.com/Txxyyy/smart-bed-studio.git（私有），origin 指向该仓库；主分支 main。当前项目不是公开的 3D_Electric_Bed 仓库。Codex 与 Claude Code 在此目录继续工作时使用已有 origin，不重复创建或修改全局默认仓库。推送仍以用户授权范围为准。
+
+- 本文件是 Codex 与 Claude Code 共用的唯一项目规则；CLAUDE.md 只导入本文件并补充 Claude 端环境差异，规则变更只改这里。分支、交接和生成文件冲突处理见 docs/AGENT_COLLABORATION.md。

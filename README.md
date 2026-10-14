@@ -232,5 +232,6 @@ npm run build:flutter
 | `references/` | 产品原始参考资料，保持原样 |
 | `exports/` | 历史交付，不反向同步源码 |
 | `work/` / `dist/` | 临时验证/构建输出，不作为源码编辑 |
+| `AGENTS.md` / `CLAUDE.md` / `.claude/` | Codex 与 Claude Code 协作规则及云端环境，见 [协作约定](docs/AGENT_COLLABORATION.md) |
 
 网页开发使用 `npm run dev`：`/` 为展示控制页，`/?embed=1` 为纯模型，`/?studio=1` 为原设计工作台。历史材质、机构、导出及 V.12–V.19 说明保留在 [MODEL_HISTORY.md](docs/MODEL_HISTORY.md)。当前型号、区域与 App 左右定义以本 README 和接口文档为准。
