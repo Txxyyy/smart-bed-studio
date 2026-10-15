@@ -34,7 +34,8 @@ export class MattressViewer{
     if(!container?.appendChild)throw sdkError('INVALID_CONTAINER','需要模型容器');
     this.container=container;this.registry=new ModelRegistry(profiles);this.listeners=new Map();this.generation=0;this.bundle=null;this.disposed=false;this.suspended=false;this.raf=0;this.dirty=true;this.frames=0;this.lastFrame=0;this.actionCounter=0;this.viewMode='solid';this.animationOwner='auto';this.animationPaused=false;this.timeOffset=0;this.pauseAt=0;this.follow=true;this.cameraFlight=null;this.revealOverride=null;this.sideReveals=null;this.scanFlights=new Map();this.highlightOverride=null;this.heatMoving=true;this.poseSpeed=1;this.airMotions=new Map();this.airHolds=new Map();this.poseMotions=new Map();this.poseHolds=new Map();
     this.mobile=matchMedia('(pointer: coarse)').matches||navigator.maxTouchPoints>1;this.pixelRatioLimit=pixelRatio;this.budget=renderBudget(performanceMode,this.mobile,pixelRatio);this.backgroundOffset=0;this.backgroundAt=null;this.appVisible=true;this.inViewport=true;this.pageHidden=document.hidden;this.lastFrameMs=0;
-    this.scheduler=new RenderScheduler(t=>this.frame(t),this.budget.maxFps);
+    this.presentationWaiters=new Set();
+    this.scheduler=new RenderScheduler(t=>{try{this.frame(t);}catch(error){this.cancelPresentation('RENDER_FAILED');this.suspend();this.emit('viewer.error',{code:'RENDER_FAILED',message:error.message});}},this.budget.maxFps);
     this.media=matchMedia('(prefers-reduced-motion: reduce)');this.motionOverride=reducedMotion;
     this.onMotionChange=()=>{if(this.bundle)this.bundle.director.reducedMotion=this.motionOverride??this.media.matches;this.invalidate();};this.media.addEventListener('change',this.onMotionChange);
     this.scene=new THREE.Scene();this.scene.background=new THREE.Color('#10191d');this.scene.fog=new THREE.FogExp2(0x111a1d,.075);
@@ -62,7 +63,7 @@ export class MattressViewer{
     this.onVisibility=()=>{this.pageHidden=document.hidden;this.updateVisibility();};document.addEventListener('visibilitychange',this.onVisibility);
     this.intersectionObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>{this.inViewport=entries[0].isIntersecting;this.updateVisibility();});this.intersectionObserver?.observe(container);
     this.observer=new ResizeObserver(()=>this.resize());this.observer.observe(container);
-    this.onLost=e=>{e.preventDefault();this.suspend();this.emit('viewer.error',{code:'CONTEXT_LOST',message:'图形上下文丢失，请恢复后提交最新状态'});};this.onRestored=()=>{this.resume();this.emit('state.resyncRequired',{});};this.renderer.domElement.addEventListener('webglcontextlost',this.onLost);this.renderer.domElement.addEventListener('webglcontextrestored',this.onRestored);
+    this.onLost=e=>{e.preventDefault();this.contextLost=true;this.cancelPresentation('CONTEXT_LOST');this.suspend();this.emit('viewer.error',{code:'CONTEXT_LOST',message:'图形上下文丢失，请恢复后提交最新状态'});};this.onRestored=()=>{this.contextLost=false;this.resume();};this.renderer.domElement.addEventListener('webglcontextlost',this.onLost);this.renderer.domElement.addEventListener('webglcontextrestored',this.onRestored);
     this.resize();
   }
   assertAlive(){if(this.disposed)throw sdkError('DISPOSED','组件已销毁');}
@@ -73,7 +74,7 @@ export class MattressViewer{
   listModels(){return this.registry.list();}
   registerModel(profile){this.assertAlive();const p=this.registry.register(profile);return {id:p.id,revision:p.revision};}
   async setModel(id){
-    this.assertAlive();const profile=this.registry.resolve(id),ticket=++this.generation;this.emit('model.loading',{id:profile.id});
+    this.assertAlive();const profile=this.registry.resolve(id),ticket=++this.generation;this.cancelPresentation('MODEL_SUPERSEDED');this.emit('model.loading',{id:profile.id});
     await prepareBrandArtwork();this.assertAlive();if(ticket!==this.generation)throw sdkError('MODEL_SUPERSEDED','已被后续型号请求替代');
     const library=new MaterialLibrary(this.renderer,()=>{},{maxAnisotropy:this.budget.anisotropy});let next={library};
     try{
@@ -144,6 +145,22 @@ export class MattressViewer{
   }
   setInteractionEnabled(enabled){this.assertAlive();this.controls.enabled=!!enabled;}
   getState(){this.assertReady();return clone({model:this.getModelInfo(),observed:this.bundle.store.snapshot(),rendered:this.bundle.current,reveal:this.sideReveals?{sides:this.sideReveals}:this.bundle.reveal,view:this.viewMode,animationPaused:this.animationPaused,camera:{position:this.activeCamera.position.toArray(),target:this.controls.target.toArray(),projection:this.activeCamera.type,follow:this.follow},motion:{poseSpeed:this.poseSpeed,air:[...this.airMotions.values()].map(({id,region,target,ratePerSecond,value})=>({id,regionId:region.id,target,ratePerSecond,value})),airTargets:Object.fromEntries(this.airHolds),pose:[...this.poseMotions.values()].map(({id,key,target,rate,value})=>({id,key,target,rate,value})),poseTargets:Object.fromEntries(this.poseHolds)},renderCount:this.frames,suspended:this.suspended});}
+  requestPresentation({presentationRevision,modelToken}={}){
+    this.assertReady();
+    if(this.contextLost)throw sdkError('CONTEXT_LOST','图形上下文尚未恢复');
+    if(!Number.isSafeInteger(presentationRevision)||presentationRevision<0)throw sdkError('INVALID_REQUEST','presentationRevision 必须为非负安全整数');
+    if(modelToken!==this.bundle.modelToken)throw sdkError('STALE_MODEL','呈现请求属于旧型号');
+    const promise=new Promise((resolve,reject)=>this.presentationWaiters.add({presentationRevision,modelToken,resolve,reject}));
+    this.invalidate();return promise;
+  }
+  cancelPresentation(code){for(const pending of this.presentationWaiters||[]){pending.reject(sdkError(code,'呈现等待已取消'));}this.presentationWaiters?.clear();}
+  completePresentation(){
+    for(const pending of this.presentationWaiters||[]){
+      if(pending.modelToken===this.bundle?.modelToken)pending.resolve({modelToken:pending.modelToken,presentationRevision:pending.presentationRevision});
+      else pending.reject(sdkError('STALE_MODEL','呈现请求属于旧型号'));
+    }
+    this.presentationWaiters?.clear();
+  }
   activeTime(now=performance.now()){return (this.backgroundAt??now)-(this.backgroundOffset||0);}
   clock(){return (this.animationPaused?this.pauseAt:this.activeTime())-this.timeOffset;}
   invalidate(){this.dirty=true;if(!this.suspended&&!this.disposed)this.scheduler.request();}
@@ -181,11 +198,12 @@ export class MattressViewer{
       if(shadowKey!==b.shadowKey){this.renderer.shadowMap.needsUpdate=true;b.shadowKey=shadowKey;}
       b.bed.update({...b.current,xray:this.viewMode==='xray'?1:0,explode:this.viewMode==='explode'?1:0,mechanism:this.viewMode==='mechanism',headboardOnly:this.viewMode==='headboard',showroom:this.viewMode==='solid',airReveal:reveal});
       const visibleSides=this.sideReveals?Object.values(this.sideReveals).filter(v=>['scan','adjust','closing'].includes(v.phase)):['scan','adjust','closing'].includes(reveal.phase)?[reveal]:[];
-      b.air.root.visible=this.viewMode==='solid'&&visibleSides.length>0;
+      // Adjustment is shown by the cover reveal and pouch motion, without flashing overlays.
+      b.air.root.visible=false;
       const visibleSideNames=new Set(visibleSides.map(item=>item.side));
       const renderedActive=this.sideReveals?active.filter(region=>visibleSideNames.has(region.side===1?'left':'right')).map(region=>region.id):b.director.selection().activeRegionIds;
       const selection={...b.director.selection(),side:visibleSides.length===2?'both':visibleSides[0]?.side??null,activeRegionIds:this.highlightOverride??renderedActive};
-      b.air.update({spine:b.bed.spine,pressures:b.current.pressures,selection,time:t/1000,moving:effectMoving&&active.length>0});
+      b.air.update({spine:b.bed.spine,pressures:b.current.pressures,selection,time:t/1000,moving:effectMoving&&active.length>0,airStates:b.store.state.air});
       b.heat.root.visible=['solid','xray'].includes(this.viewMode)&&b.current.heating.flat().some(v=>v>0);
       const thermalMoving=effectMoving&&this.heatMoving&&Object.values(b.store.state.heating).some(h=>h.status==='heating');
       b.heat.update({massageChannels:b.profile.massage,spine:b.bed.spine,...b.current,time:t/1000,moving:thermalMoving});
@@ -201,7 +219,7 @@ export class MattressViewer{
       if(k===1){this.cameraFlight=null;this.emit('camera.completed',{actionId:f.id});}else moving=true;
     }
     this.controls.update(dt);moving ||= this.controls.autoRotate;
-    this.renderer.render(this.scene,this.activeCamera);this.frames++;this.dirty=false;this.lastFrameMs=performance.now()-frameStart;
+    this.renderer.render(this.scene,this.activeCamera);this.completePresentation();this.frames++;this.dirty=false;this.lastFrameMs=performance.now()-frameStart;
     if(this.bundle&&this.presentedToken!==this.bundle.modelToken){this.presentedToken=this.bundle.modelToken;this.emit('model.presented',{modelToken:this.bundle.modelToken});}
     if(moving)this.invalidate();
   }
@@ -287,7 +305,7 @@ export class MattressViewer{
   resize(){this.assertAlive();const w=Math.max(1,this.container.clientWidth),h=Math.max(1,this.container.clientHeight);this.renderer.setSize(w,h);this.updateVisibility();this.perspective.aspect=w/h;this.perspective.updateProjectionMatrix();const half=Math.max(1.9,1.1/(w/h));Object.assign(this.ortho,{left:-half*w/h,right:half*w/h,top:half,bottom:-half});this.ortho.updateProjectionMatrix();if(this.bundle&&this.follow&&!this.bundle.store.initialized&&this.activeCamera===this.perspective)this.fitCamera(0,false);this.invalidate();}
   suspend(){this.assertAlive();this.suspended=true;this.scheduler.cancel();this.raf=0;this.camera.cancel();this.cancelScan();if(this.revealOverride?.phase==='scan'||this.revealOverride?.phase==='closing')this.revealOverride=closed();if(this.sideReveals)for(const side of ['left','right'])if(['scan','closing'].includes(this.sideReveals[side].phase))this.sideReveals[side]=closed();}
   resume(){this.assertAlive();this.suspended=false;this.lastFrame=performance.now();if(this.bundle){this.bundle.current=this.bundle.store.targets(this.bundle.current);this.bundle.director.phase='closed';this.bundle.director.side=null;}this.invalidate();this.emit('state.resyncRequired',{});}
-  dispose(){if(this.disposed)return;this.disposed=true;++this.generation;this.scheduler.cancel();this.intersectionObserver?.disconnect();document.removeEventListener('visibilitychange',this.onVisibility);this.observer.disconnect();this.media.removeEventListener('change',this.onMotionChange);this.controls.dispose();this.renderer.domElement.removeEventListener('webglcontextlost',this.onLost);this.renderer.domElement.removeEventListener('webglcontextrestored',this.onRestored);release(this.bundle);this.environment.dispose();this.floor.geometry.dispose();this.floor.material.dispose();this.grid.geometry.dispose();this.grid.material.dispose();this.scene.traverse(o=>o.shadow?.dispose());this.renderer.dispose();this.renderer.domElement.remove();this.listeners.clear();}
+  dispose(){if(this.disposed)return;this.cancelPresentation('DISPOSED');this.disposed=true;++this.generation;this.scheduler.cancel();this.intersectionObserver?.disconnect();document.removeEventListener('visibilitychange',this.onVisibility);this.observer.disconnect();this.media.removeEventListener('change',this.onMotionChange);this.controls.dispose();this.renderer.domElement.removeEventListener('webglcontextlost',this.onLost);this.renderer.domElement.removeEventListener('webglcontextrestored',this.onRestored);release(this.bundle);this.environment.dispose();this.floor.geometry.dispose();this.floor.material.dispose();this.grid.geometry.dispose();this.grid.material.dispose();this.scene.traverse(o=>o.shadow?.dispose());this.renderer.dispose();this.renderer.domElement.remove();this.listeners.clear();}
 }
 
 export function createMattressViewer(container,options){return new MattressViewer(container,options);}

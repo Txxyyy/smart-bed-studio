@@ -102,7 +102,7 @@ mattress.massage.setState('right', { status: 'off' }, options);   // 只停止�
 
 字段省略表示保持上次设置；`intensity` / `cycleSeconds` 为 null 时使用型号默认展示值。只设置强度或周期不会自动启动，运行中修改强度采用平滑过渡，暂停时保留可见形态、恢复后追随新设置。重复运行状态、修改周期和启动另一侧均不重置本侧相位，动画不改写 `observed.massage`；`rendered.massage` 提供展示相位和淡入幅度。批量入口接受 `massage: {left: {...}, right: {...}}`，与 air / heating / pose 同时提交时原子校验。
 
-默认整体合拢且按摩不改变面料透明度。运行侧按摩气囊带动对应床面缓慢隆起、回落，紫色气囊光圈与扩散纹跟随床面；软硬调节仅改变内部支撑气囊，不顶起外罩。可同时叠加橙金加热、青蓝软硬调节及电动床姿态。开启自动跟随时，首次单侧按摩转向该侧床尾；已有按摩或软硬调节继续时不抢镜头。App 可以显式调用 camera.focusSide。
+默认整体合拢且按摩不改变面料透明度。运行侧按摩气囊带动对应床面缓慢隆起、回落，紫色气囊光圈与扩散纹跟随床面；软硬调节仅改变内部支撑气囊，不顶起外罩。可同时进行软硬调节、橙金加热及电动床姿态变化。开启自动跟随时，首次单侧按摩转向该侧床尾；已有按摩或软硬调节继续时不抢镜头。App 可以显式调用 camera.focusSide。
 
 `animation.pause/resume` 控制整体效果时间线；`setDataAvailable(false)` 冻结当前按摩形态和相位；停止后收尾完毕不持续绘制。减少动态效果时显示静态按摩结构，停止后恢复实体外观。切换型号创建全新的按摩状态并回收实例网格资源。JSON 分发入口支持 `method: 'massage.setState'`，参数与 JavaScript 接口相同。
 
@@ -163,7 +163,7 @@ mattress.updateDeviceState({
 | `pose.moveTo({back?, leg?})` | 背/腿独立匀速走到角度；每项为 `{angle, degreesPerSecond}`，最大 65° / 35°，速度最大 30°/秒 |
 | `pose.stop('back' / 'leg'?)` | 停止指定床体部位，省略参数停止背部和腿部，并交还给真实状态 |
 | `effects.setPoseSpeed(0.25–3)` | 设置模型中床体姿态的展示速度倍率；不发送硬件速度命令 |
-| `effects.setHighlight(regionIds)` | 显式指定强调区域 |
+| `effects.setHighlight(regionIds)` | 保留兼容与区域校验；当前 3D 展示不绘制调节高光 |
 | `effects.setHeatingStyle({moving})` | 是否允许动态热纹，不修改加热档位 |
 
 手动镜头调用或用户拖动会关闭自动跟随；App 调用 setFollow(true) 恢复。setAutoRotate 也进入手动镜头模式。左右两侧同时调节时，两个扫描/形变状态独立；镜头只跟随最近指定的侧别，不停止另一侧。效果接口只控制表现；它们不能下发设备命令或制造设备完成状态。
@@ -197,7 +197,7 @@ mattress.effects.scanOut();
 - `dispose()`：释放实例的监听与图形资源；实例销毁后不可再加载型号。
 - `getState()`：返回 observed（App 提供）、rendered（视觉插值）、reveal、camera、renderCount 等只读副本。
 
-系统减少动态效果开启时跳过相机/扫描过渡并关闭动态流光。组件可通过创建选项 reducedMotion 显式指定。静止时停止绘制，持续调节/加热或自动旋转期间按需绘制。
+系统减少动态效果开启时跳过相机/扫描过渡并关闭动态流光。组件可通过创建选项 reducedMotion 显式指定。静止时停止绘制，气囊数值变化、扫描、加热或自动旋转期间按需绘制；仅保持调节状态且数值稳定时，不为调节高光持续绘制。
 
 ## 6. 回调与原生 App 调用
 
@@ -226,7 +226,7 @@ await window.mattressDispatch({
 
 ## 7. 新型号配置
 
-配置 schemaVersion 为 1。结构参考 `src/model-profiles.js` 的内置配置，动态气囊/热区字段在 `src/air-layout.js`。每个控制区域指定 id、side（0 左/1 右）、name、range；每个气囊指定 regionId、位置、尺寸、影响范围及高度参数。一个 regionId 可以关联多个气囊。热区独立于气囊下标。气囊内部索引由组件生成，App 不引用它。
+配置 schemaVersion 为 1。结构参考 `src/model-profiles.js` 的内置配置，动态气囊/热区字段在 `src/air-layout.js`。每个控制区域指定 id、side（0 右/1 左，按人体仰躺定义）、name、range；每个气囊指定 regionId、位置、尺寸、影响范围及高度参数。一个 regionId 可以关联多个气囊。热区独立于气囊下标。气囊内部索引由组件生成，App 不引用它。
 
 通过 registerModel 注册完整配置，或创建组件时传入 `{profiles:[profile]}`。配置校验覆盖 ID/引用、半侧边界、数量上限、范围、模板、材质及贴图；配置在实例内不可变，不会被运行值改写。程序纹理与外部贴图均可由 appearance.materials 配置。
 
@@ -234,7 +234,7 @@ await window.mattressDispatch({
 
 ## T11+ revision 2：单侧七囊、三路
 
-T11+ 每侧按肩部 2 囊、腰部 2 囊、臀部 3 囊分组，共 14 个网格、6 个独立区域。区域 ID 为 `left.shoulder / left.lumbar / left.hip` 与 `right.shoulder / right.lumbar / right.hip`。同一区域的 value、status、动画及强调同步应用于组内所有气囊。T11+ 不再接受 `left.leg / right.leg` 作为软硬区域；腿部加热 ID 保留。
+T11+ 每侧按肩部 2 囊、腰部 2 囊、臀部 3 囊分组，共 14 个网格、6 个独立区域。区域 ID 为 `left.shoulder / left.lumbar / left.hip` 与 `right.shoulder / right.lumbar / right.hip`。同一区域的 value、status 及动画同步应用于组内所有气囊。T11+ 不再接受 `left.leg / right.leg` 作为软硬区域；腿部加热 ID 保留。
 
 例如 `viewer.setAirState('left.hip', {value:70,status:'adjusting'})` 同时驱动左侧臀部三囊。原 `air.moveTo`、`adjustment.begin/end` 接口不变。页面按型号 regions 顺序依次执行肩→腰→臀，一次入场扫描、三个部位、一次退场扫描。App 应通过 getModelInfo 获取区域，而非固定四个部位。
 
@@ -261,6 +261,18 @@ viewer.body.setState('left.hip', {value:60,status:'adjusting'}, {modelToken});
 
 构造支持 `performanceMode: 'auto' | 'native' | 'eco' | 'balanced' | 'high'`（默认auto，所有设备native，保留原画质及屏幕刷新节奏）。运行时 `setPerformanceMode(mode)` 切换；`setVisible(false/true)` 与 App 页面生命周期对接；`getPerformanceStats()` 获取计数和档位。三者支持页面 JSON 分发。详细档位、后台停绘语义和验证限制见 [PERFORMANCE.md](PERFORMANCE.md)。
 
-## Flutter 嵌入（1.0.0）
+## Flutter 嵌入（1.1.0）
 
 新增 UI-free 的 embed.html、WebViewBridge 协议 v1 和 flutter/smart_mattress_viewer 组件包。独立入口先建立桥接，由 App 显式 setModel；model.presented 表示型号首帧已提交。旧 ?embed=1 保留 window.mattress / mattressDispatch 及型号查询参数。完整接入见 [FLUTTER_INTEGRATION.md](FLUTTER_INTEGRATION.md)。
+
+## Flutter 原生展示后端
+
+本文件的 JavaScript 接口仍描述 WebView 3D SDK。Flutter 可通过 `RenderPolicy.auto / threeD / twoD / staticImage` 选择展示，原生二维无需 WebView 或 JS 执行。默认仍为 `threeD`，新接入显式使用 auto。
+
+两后端共用设备状态语义、型号区域 ID、null/省略/0 区分、固定 Session 和快照/增量顺序。原生二维以高亮替代 focusSide/focusRegion，任意镜头和结构展示受限；registerModel 需要额外的 fallback 描述和随 App 打包的本地资产，不能将全量 JS 方法视为均可用：详细支持矩阵见 [RENDER_FALLBACK.md](RENDER_FALLBACK.md)。不支持的展示方法返回 `UNSUPPORTED_RENDERER_FEATURE`，型号业务不支持仍使用 `UNSUPPORTED_MASSAGE` 等原错误码。
+
+Flutter 的 `RendererInfo.capabilities` 是展示能力，`MattressModelInfo` 是设备型号能力。后端切换触发重复 onReady，App 重建固定会话并同步最新状态。首帧提交屏障关联型号 token 与展示状态版本，仅证明渲染提交，不能证明硬件动作完成或视觉验收。
+
+原生聚焦返回 `actionId` 与 `representation: highlight`，完成事件为 `presentation.completed`，不是 `camera.completed`。原生 `setPerformanceMode` 返回 `configured`、`applied: false` 并保留 3D 偏好；性能统计中的 camera/triangles/drawCalls/maxFps 为 null。
+
+2026-10-15 调节视觉修订：3D 支撑调节关闭气囊顶部区域光、囊壁流光、轮廓脉冲和散点，显示气囊本身的材质与压力形变，避免闪动高光。入场/退场扫描及单侧透视仍由 cover-reveal.js 控制；外罩不随支撑隆起。此规则适用于正式 SDK、Flutter 内嵌 3D 和旧设计工作台；加热、按摩及原生二维效果沿用各自表现。

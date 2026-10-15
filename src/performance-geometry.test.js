@@ -68,13 +68,14 @@ test('hologram time animation avoids static geometry work and hidden sides updat
   const active=effect.entries.find(e=>e.definition.regionId==='left.circuit2'),hidden=effect.entries.filter(e=>e.side===0);
   const tileVersion=version(active.tile),pulseVersion=version(active.pulse),particleVersion=version(active.particles);
   effect.update({...state,time:2});
-  assert.equal(version(active.tile),tileVersion);assert.equal(version(active.pulse),pulseVersion);assert.ok(version(active.particles)>particleVersion);
-  assert.equal(active.tile.material.uniforms.time.value,2);assert.ok(hidden.every(e=>version(e.tile)===0&&!e.tile.visible));
+  assert.equal(version(active.tile),tileVersion);assert.equal(version(active.pulse),pulseVersion);assert.equal(version(active.particles),particleVersion);
+  assert.ok(active.tile.material.uniforms.time.value>0);assert.ok(hidden.every(e=>version(e.tile)===0&&!e.tile.visible));
+  assert.ok(!active.particles.visible&&!active.pulse.visible);
   pressures[1][active.zone]=85;effect.update({...state,time:3});assert.equal(version(active.tile),tileVersion+1);
   const before=version(active.tile);
   effect.update({...state,selection:{...state.selection,kind:'heat'},time:4});
   assert.ok(effect.entries.every(e=>!e.tile.visible&&!e.pulse.visible&&!e.particles.visible));assert.equal(version(active.tile),before);
   effect.update({...state,spine:buildSpine(65,35),selection:{side:'right',kind:'air',activeRegionIds:['right.circuit7']},time:5});
   assert.ok(hidden.every(e=>version(e.tile)>0&&e.tile.visible&&e.tile.geometry.attributes.position.array.every(Number.isFinite)));
-  assert.equal(effect.entries.filter(e=>e.pulse.visible).length,2);
+  assert.equal(effect.surface.entries.filter(e=>e.mesh.visible).length,2);
 });

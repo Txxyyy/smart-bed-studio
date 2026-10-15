@@ -12,6 +12,43 @@ enum CameraPreset { perspective, leftFoot, rightFoot, top, side }
 
 enum PerformanceMode { auto, native, eco, balanced, high }
 
+// `static` is a Dart keyword; the public name is staticImage.
+enum RenderPolicy { auto, threeD, twoD, staticImage }
+
+enum RenderMode { threeD, twoD, staticImage }
+
+class FallbackOptions {
+  final Duration threeDAttemptBudget;
+  final Duration contextRestoreBudget;
+  const FallbackOptions({
+    this.threeDAttemptBudget = const Duration(seconds: 6),
+    this.contextRestoreBudget = const Duration(seconds: 2),
+  });
+}
+
+class RendererInfo {
+  final RenderPolicy requestedPolicy;
+  final RenderMode activeMode;
+  final String phase;
+  final String? reasonCode;
+  final int attemptId;
+  const RendererInfo(
+      {required this.requestedPolicy,
+      required this.activeMode,
+      this.phase = 'ready',
+      this.reasonCode,
+      this.attemptId = 0});
+
+  Map<String, bool> get capabilities => {
+        'interactiveCamera': activeMode == RenderMode.threeD,
+        'geometryDeformation': activeMode == RenderMode.threeD,
+        'layerViews': activeMode == RenderMode.threeD,
+        'regionEffects': true,
+        'poseDiagram': activeMode != RenderMode.threeD,
+        'dynamicEffects': activeMode != RenderMode.staticImage,
+      };
+}
+
 class MattressException implements Exception {
   final String code;
   final String message;

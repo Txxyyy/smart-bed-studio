@@ -1,0 +1,4015 @@
+{
+  "schemaVersion": 1,
+  "aliases": {
+    "T11+": "t11-plus",
+    "T12": "t12"
+  },
+  "methods": [
+    "setVisible",
+    "setPerformanceMode",
+    "getPerformanceStats",
+    "setModel",
+    "updateDeviceState",
+    "setAirState",
+    "setPose",
+    "setDataAvailable",
+    "adjustment.begin",
+    "adjustment.end",
+    "adjustment.cancel",
+    "air.moveTo",
+    "air.stop",
+    "pose.moveTo",
+    "pose.stop",
+    "heating.setState",
+    "body.setState",
+    "tidal.setWaistCircuit",
+    "massage.setState",
+    "getModelInfo",
+    "getState",
+    "listModels",
+    "registerModel",
+    "resize",
+    "suspend",
+    "resume",
+    "dispose",
+    "camera.setPreset",
+    "camera.focusRegion",
+    "camera.focusSide",
+    "camera.setPose",
+    "camera.fit",
+    "camera.reset",
+    "camera.pause",
+    "camera.resume",
+    "camera.cancel",
+    "camera.setFollow",
+    "camera.setAutoRotate",
+    "camera.setPreferredSide",
+    "animation.setPolicy",
+    "animation.pause",
+    "animation.resume",
+    "animation.cancel",
+    "effects.scanIn",
+    "effects.scanOut",
+    "effects.setReveal",
+    "effects.setSideReveal",
+    "effects.setHighlight",
+    "effects.setHeatingStyle",
+    "effects.setPoseSpeed",
+    "view.setMode",
+    "view.focusLayer",
+    "view.setBedStyle",
+    "view.setHeadboardStyle",
+    "camera.setZoom",
+    "setInteractionEnabled"
+  ],
+  "models": [
+    {
+      "schemaVersion": 1,
+      "revision": 2,
+      "template": "articulated-160x190",
+      "sideConvention": "supine",
+      "regions": [
+        {
+          "id": "right.shoulder",
+          "name": "肩部",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "right.lumbar",
+          "name": "腰部",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "right.hip",
+          "name": "臀部",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.shoulder",
+          "name": "肩部",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.lumbar",
+          "name": "腰部",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.hip",
+          "name": "臀部",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        }
+      ],
+      "airbags": [
+        {
+          "id": "right.shoulder-1",
+          "regionId": "right.shoulder",
+          "side": 0,
+          "x": -0.39,
+          "z": -0.64,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 0
+        },
+        {
+          "id": "right.shoulder-2",
+          "regionId": "right.shoulder",
+          "side": 0,
+          "x": -0.39,
+          "z": -0.46,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 1
+        },
+        {
+          "id": "right.lumbar-1",
+          "regionId": "right.lumbar",
+          "side": 0,
+          "x": -0.39,
+          "z": -0.23,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 2
+        },
+        {
+          "id": "right.lumbar-2",
+          "regionId": "right.lumbar",
+          "side": 0,
+          "x": -0.39,
+          "z": -0.05,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 3
+        },
+        {
+          "id": "right.hip-1",
+          "regionId": "right.hip",
+          "side": 0,
+          "x": -0.39,
+          "z": 0.18,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 4
+        },
+        {
+          "id": "right.hip-2",
+          "regionId": "right.hip",
+          "side": 0,
+          "x": -0.39,
+          "z": 0.36,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 5
+        },
+        {
+          "id": "right.hip-3",
+          "regionId": "right.hip",
+          "side": 0,
+          "x": -0.39,
+          "z": 0.54,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 6
+        },
+        {
+          "id": "left.shoulder-1",
+          "regionId": "left.shoulder",
+          "side": 1,
+          "x": 0.39,
+          "z": -0.64,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 0
+        },
+        {
+          "id": "left.shoulder-2",
+          "regionId": "left.shoulder",
+          "side": 1,
+          "x": 0.39,
+          "z": -0.46,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 1
+        },
+        {
+          "id": "left.lumbar-1",
+          "regionId": "left.lumbar",
+          "side": 1,
+          "x": 0.39,
+          "z": -0.23,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 2
+        },
+        {
+          "id": "left.lumbar-2",
+          "regionId": "left.lumbar",
+          "side": 1,
+          "x": 0.39,
+          "z": -0.05,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 3
+        },
+        {
+          "id": "left.hip-1",
+          "regionId": "left.hip",
+          "side": 1,
+          "x": 0.39,
+          "z": 0.18,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 4
+        },
+        {
+          "id": "left.hip-2",
+          "regionId": "left.hip",
+          "side": 1,
+          "x": 0.39,
+          "z": 0.36,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 5
+        },
+        {
+          "id": "left.hip-3",
+          "regionId": "left.hip",
+          "side": 1,
+          "x": 0.39,
+          "z": 0.54,
+          "width": 0.65,
+          "depth": 0.15,
+          "spreadX": 0.3,
+          "spread": 0.085,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057,
+          "zone": 6
+        }
+      ],
+      "heating": [
+        {
+          "id": "right.lumbar",
+          "side": 0,
+          "region": 0,
+          "z": -0.17,
+          "depth": 0.3,
+          "x": -0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腰部"
+        },
+        {
+          "id": "right.leg",
+          "side": 0,
+          "region": 1,
+          "z": 0.63,
+          "depth": 0.38,
+          "x": -0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腿部"
+        },
+        {
+          "id": "left.lumbar",
+          "side": 1,
+          "region": 0,
+          "z": -0.17,
+          "depth": 0.3,
+          "x": 0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腰部"
+        },
+        {
+          "id": "left.leg",
+          "side": 1,
+          "region": 1,
+          "z": 0.63,
+          "depth": 0.38,
+          "x": 0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腿部"
+        }
+      ],
+      "input": {
+        "format": "canonical-v1"
+      },
+      "presentation": {
+        "scanMs": 950,
+        "flightMs": 1150,
+        "coverOpacity": 0.38
+      },
+      "id": "t11-plus",
+      "name": "T11+",
+      "status": "reference",
+      "configurationNote": "每侧7囊、3路：肩部2囊＋腰部2囊＋臀部3囊；气囊尺寸和间距为展示适配，待实测规格确认。",
+      "appearance": {
+        "collection": "indigoWeave",
+        "bedStyle": "flush",
+        "headboard": "channel",
+        "waistband": true,
+        "surroundAccents": false,
+        "modelLabel": "T11+"
+      },
+      "massage": [],
+      "fallback": {
+        "image": "packages/smart_mattress_viewer/assets/fallback/t11-plus/base.png",
+        "layers": {
+          "left": "packages/smart_mattress_viewer/assets/fallback/t11-plus/reveal-left.png",
+          "right": "packages/smart_mattress_viewer/assets/fallback/t11-plus/reveal-right.png"
+        },
+        "regions": {
+          "schemaVersion": 1,
+          "modelId": "t11-plus",
+          "modelRevision": 2,
+          "assetRevision": 2,
+          "appearanceKey": "indigoWeave",
+          "width": 1200,
+          "height": 1400,
+          "sideConvention": "supine",
+          "fit": "contain",
+          "pose": {
+            "back": 0,
+            "leg": 0
+          },
+          "camera": {
+            "position": [
+              0,
+              2.88,
+              2.89
+            ],
+            "target": [
+              0,
+              0.56,
+              -0.04
+            ],
+            "fov": 38
+          },
+          "surface": [
+            [
+              0.194294,
+              0.30778
+            ],
+            [
+              0.805706,
+              0.30778
+            ],
+            [
+              0.960398,
+              0.792326
+            ],
+            [
+              0.039602,
+              0.792326
+            ]
+          ],
+          "sidePolygons": {
+            "left": [
+              [
+                0.5,
+                0.30778
+              ],
+              [
+                0.805706,
+                0.30778
+              ],
+              [
+                0.960398,
+                0.792326
+              ],
+              [
+                0.5,
+                0.792326
+              ]
+            ],
+            "right": [
+              [
+                0.194294,
+                0.30778
+              ],
+              [
+                0.5,
+                0.30778
+              ],
+              [
+                0.5,
+                0.792326
+              ],
+              [
+                0.039602,
+                0.792326
+              ]
+            ]
+          },
+          "regions": [
+            {
+              "id": "right.shoulder",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.214928,
+                  0.3493
+                ],
+                [
+                  0.474084,
+                  0.3493
+                ],
+                [
+                  0.472404,
+                  0.414076
+                ],
+                [
+                  0.196446,
+                  0.414076
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.344819,
+                  "y": 0.394493,
+                  "rx": 0.11379900000000004,
+                  "ry": 0.013439000000000034,
+                  "shape": "pouch"
+                },
+                {
+                  "x": 0.339499,
+                  "y": 0.430292,
+                  "rx": 0.117701,
+                  "ry": 0.01438299999999998,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "right.lumbar",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.191598,
+                  0.431065
+                ],
+                [
+                  0.471963,
+                  0.431065
+                ],
+                [
+                  0.469986,
+                  0.507282
+                ],
+                [
+                  0.169851,
+                  0.507282
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.332146,
+                  "y": 0.479771,
+                  "rx": 0.12309300000000001,
+                  "ry": 0.015739999999999976,
+                  "shape": "pouch"
+                },
+                {
+                  "x": 0.325905,
+                  "y": 0.521773,
+                  "rx": 0.12767,
+                  "ry": 0.016940999999999984,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "right.hip",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.164109,
+                  0.527406
+                ],
+                [
+                  0.469464,
+                  0.527406
+                ],
+                [
+                  0.465657,
+                  0.674201
+                ],
+                [
+                  0.122224,
+                  0.674201
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.31722,
+                  "y": 0.580215,
+                  "rx": 0.13403900000000002,
+                  "ry": 0.01868599999999998,
+                  "shape": "pouch"
+                },
+                {
+                  "x": 0.309795,
+                  "y": 0.630184,
+                  "rx": 0.139484,
+                  "ry": 0.020248000000000044,
+                  "shape": "pouch"
+                },
+                {
+                  "x": 0.301741,
+                  "y": 0.684385,
+                  "rx": 0.14539000000000002,
+                  "ry": 0.022013999999999978,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "left.shoulder",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.525916,
+                  0.3493
+                ],
+                [
+                  0.785072,
+                  0.3493
+                ],
+                [
+                  0.803554,
+                  0.414076
+                ],
+                [
+                  0.527596,
+                  0.414076
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.655181,
+                  "y": 0.394493,
+                  "rx": 0.11380000000000001,
+                  "ry": 0.013439000000000034,
+                  "shape": "pouch"
+                },
+                {
+                  "x": 0.660501,
+                  "y": 0.430292,
+                  "rx": 0.11770099999999994,
+                  "ry": 0.01438299999999998,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "left.lumbar",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.528037,
+                  0.431065
+                ],
+                [
+                  0.808402,
+                  0.431065
+                ],
+                [
+                  0.830149,
+                  0.507282
+                ],
+                [
+                  0.530014,
+                  0.507282
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.667854,
+                  "y": 0.479771,
+                  "rx": 0.12309200000000009,
+                  "ry": 0.015739999999999976,
+                  "shape": "pouch"
+                },
+                {
+                  "x": 0.674095,
+                  "y": 0.521773,
+                  "rx": 0.12766999999999995,
+                  "ry": 0.016940999999999984,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "left.hip",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.530536,
+                  0.527406
+                ],
+                [
+                  0.835891,
+                  0.527406
+                ],
+                [
+                  0.877776,
+                  0.674201
+                ],
+                [
+                  0.534343,
+                  0.674201
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.68278,
+                  "y": 0.580215,
+                  "rx": 0.134038,
+                  "ry": 0.01868599999999998,
+                  "shape": "pouch"
+                },
+                {
+                  "x": 0.690205,
+                  "y": 0.630184,
+                  "rx": 0.13948400000000005,
+                  "ry": 0.020248000000000044,
+                  "shape": "pouch"
+                },
+                {
+                  "x": 0.698259,
+                  "y": 0.684385,
+                  "rx": 0.14539100000000005,
+                  "ry": 0.022013999999999978,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "right.lumbar",
+              "kind": "heating",
+              "side": "right",
+              "polygon": [
+                [
+                  0.20929,
+                  0.427838
+                ],
+                [
+                  0.455275,
+                  0.427838
+                ],
+                [
+                  0.452436,
+                  0.496262
+                ],
+                [
+                  0.190832,
+                  0.496262
+                ]
+              ]
+            },
+            {
+              "id": "right.leg",
+              "kind": "heating",
+              "side": "right",
+              "polygon": [
+                [
+                  0.157486,
+                  0.619874
+                ],
+                [
+                  0.447305,
+                  0.619874
+                ],
+                [
+                  0.442151,
+                  0.744068
+                ],
+                [
+                  0.123982,
+                  0.744068
+                ]
+              ]
+            },
+            {
+              "id": "left.lumbar",
+              "kind": "heating",
+              "side": "left",
+              "polygon": [
+                [
+                  0.544725,
+                  0.427838
+                ],
+                [
+                  0.79071,
+                  0.427838
+                ],
+                [
+                  0.809168,
+                  0.496262
+                ],
+                [
+                  0.547564,
+                  0.496262
+                ]
+              ]
+            },
+            {
+              "id": "left.leg",
+              "kind": "heating",
+              "side": "left",
+              "polygon": [
+                [
+                  0.552695,
+                  0.619874
+                ],
+                [
+                  0.842514,
+                  0.619874
+                ],
+                [
+                  0.876018,
+                  0.744068
+                ],
+                [
+                  0.557849,
+                  0.744068
+                ]
+              ]
+            }
+          ],
+          "imageSha256": "e7d9ba3c7dc79d3f6613b5f1fe45d26073db6b31c7a749797f54e32e7108609c",
+          "layerSha256": {
+            "left": "62b03da9f4a45ae825a448c342e08d84671fab0d4326ebd267634348b9d69d95",
+            "right": "63172035808511831c9aa35e19655e42bbe59c1980a28ecbc1c9e65425d69a74"
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "revision": 8,
+      "template": "articulated-160x190",
+      "sideConvention": "supine",
+      "regions": [
+        {
+          "id": "right.circuit1",
+          "name": "气路1",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "right.circuit2",
+          "name": "气路2",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "right.circuit3",
+          "name": "气路3",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "right.circuit4",
+          "name": "气路4",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "right.circuit5",
+          "name": "气路5",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "right.circuit6",
+          "name": "气路6",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "right.circuit7",
+          "name": "气路7",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.circuit1",
+          "name": "气路1",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.circuit2",
+          "name": "气路2",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.circuit3",
+          "name": "气路3",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.circuit4",
+          "name": "气路4",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.circuit5",
+          "name": "气路5",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.circuit6",
+          "name": "气路6",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.circuit7",
+          "name": "气路7",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        }
+      ],
+      "airbags": [
+        {
+          "id": "right.row1",
+          "regionId": "right.circuit1",
+          "side": 0,
+          "x": -0.4,
+          "z": -0.72,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 0
+        },
+        {
+          "id": "right.row2",
+          "regionId": "right.circuit2",
+          "side": 0,
+          "x": -0.4,
+          "z": -0.58,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 1
+        },
+        {
+          "id": "right.row3",
+          "regionId": "right.circuit2",
+          "side": 0,
+          "x": -0.4,
+          "z": -0.43999999999999995,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 2
+        },
+        {
+          "id": "right.row4",
+          "regionId": "right.circuit3",
+          "side": 0,
+          "x": -0.4,
+          "z": -0.29999999999999993,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 3
+        },
+        {
+          "id": "right.row5",
+          "regionId": "right.circuit4",
+          "side": 0,
+          "x": -0.4,
+          "z": -0.15999999999999992,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 4
+        },
+        {
+          "id": "right.row6",
+          "regionId": "right.circuit5",
+          "side": 0,
+          "x": -0.4,
+          "z": -0.019999999999999907,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 5
+        },
+        {
+          "id": "right.row7",
+          "regionId": "right.circuit6",
+          "side": 0,
+          "x": -0.4,
+          "z": 0.1200000000000001,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 6
+        },
+        {
+          "id": "right.row8",
+          "regionId": "right.circuit7",
+          "side": 0,
+          "x": -0.4,
+          "z": 0.2600000000000001,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 7
+        },
+        {
+          "id": "right.row9",
+          "regionId": "right.circuit7",
+          "side": 0,
+          "x": -0.4,
+          "z": 0.40000000000000013,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 8
+        },
+        {
+          "id": "left.row1",
+          "regionId": "left.circuit1",
+          "side": 1,
+          "x": 0.4,
+          "z": -0.72,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 0
+        },
+        {
+          "id": "left.row2",
+          "regionId": "left.circuit2",
+          "side": 1,
+          "x": 0.4,
+          "z": -0.58,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 1
+        },
+        {
+          "id": "left.row3",
+          "regionId": "left.circuit2",
+          "side": 1,
+          "x": 0.4,
+          "z": -0.43999999999999995,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 2
+        },
+        {
+          "id": "left.row4",
+          "regionId": "left.circuit3",
+          "side": 1,
+          "x": 0.4,
+          "z": -0.29999999999999993,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 3
+        },
+        {
+          "id": "left.row5",
+          "regionId": "left.circuit4",
+          "side": 1,
+          "x": 0.4,
+          "z": -0.15999999999999992,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 4
+        },
+        {
+          "id": "left.row6",
+          "regionId": "left.circuit5",
+          "side": 1,
+          "x": 0.4,
+          "z": -0.019999999999999907,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 5
+        },
+        {
+          "id": "left.row7",
+          "regionId": "left.circuit6",
+          "side": 1,
+          "x": 0.4,
+          "z": 0.1200000000000001,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 6
+        },
+        {
+          "id": "left.row8",
+          "regionId": "left.circuit7",
+          "side": 1,
+          "x": 0.4,
+          "z": 0.2600000000000001,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 7
+        },
+        {
+          "id": "left.row9",
+          "regionId": "left.circuit7",
+          "side": 1,
+          "x": 0.4,
+          "z": 0.40000000000000013,
+          "width": 0.74,
+          "depth": 0.12,
+          "spreadX": 0.35,
+          "spread": 0.06,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.018,
+          "halfHeightRange": 0.045,
+          "shape": "round-array",
+          "cellCount": 7,
+          "zone": 8
+        }
+      ],
+      "heating": [
+        {
+          "id": "right.lumbar",
+          "side": 0,
+          "region": 0,
+          "z": -0.17,
+          "depth": 0.3,
+          "x": -0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腰部"
+        },
+        {
+          "id": "right.leg",
+          "side": 0,
+          "region": 1,
+          "z": 0.63,
+          "depth": 0.38,
+          "x": -0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腿部"
+        },
+        {
+          "id": "left.lumbar",
+          "side": 1,
+          "region": 0,
+          "z": -0.17,
+          "depth": 0.3,
+          "x": 0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腰部"
+        },
+        {
+          "id": "left.leg",
+          "side": 1,
+          "region": 1,
+          "z": 0.63,
+          "depth": 0.38,
+          "x": 0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腿部"
+        }
+      ],
+      "input": {
+        "format": "canonical-v1"
+      },
+      "presentation": {
+        "scanMs": 950,
+        "flightMs": 1150,
+        "coverOpacity": 0.38
+      },
+      "id": "t12",
+      "tidal": true,
+      "name": "T12",
+      "status": "reference",
+      "massage": [
+        {
+          "id": "right",
+          "side": 0,
+          "name": "人体右侧",
+          "defaultIntensity": 0.7,
+          "defaultCycleSeconds": 9,
+          "pads": [
+            {
+              "id": "right.massage-1",
+              "x": -0.4,
+              "z": -0.56,
+              "width": 0.5,
+              "depth": 0.22,
+              "cells": [
+                {
+                  "x": -0.17300000000000001,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": -0.097,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": -0.135,
+                  "z": -0.043,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.097,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.17300000000000001,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.135,
+                  "z": -0.043,
+                  "radius": 0.043
+                }
+              ]
+            },
+            {
+              "id": "right.massage-2",
+              "x": -0.4,
+              "z": -0.24,
+              "width": 0.5,
+              "depth": 0.22,
+              "cells": [
+                {
+                  "x": -0.17300000000000001,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": -0.097,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": -0.135,
+                  "z": -0.043,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.097,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.17300000000000001,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.135,
+                  "z": -0.043,
+                  "radius": 0.043
+                }
+              ]
+            },
+            {
+              "id": "right.massage-3",
+              "x": -0.4,
+              "z": 0.49,
+              "width": 0.5,
+              "depth": 0.22,
+              "cells": [
+                {
+                  "x": -0.174,
+                  "z": 0,
+                  "radius": 0.043
+                },
+                {
+                  "x": -0.058,
+                  "z": 0,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.058,
+                  "z": 0,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.174,
+                  "z": 0,
+                  "radius": 0.043
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "left",
+          "side": 1,
+          "name": "人体左侧",
+          "defaultIntensity": 0.7,
+          "defaultCycleSeconds": 9,
+          "pads": [
+            {
+              "id": "left.massage-1",
+              "x": 0.4,
+              "z": -0.56,
+              "width": 0.5,
+              "depth": 0.22,
+              "cells": [
+                {
+                  "x": -0.17300000000000001,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": -0.097,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": -0.135,
+                  "z": -0.043,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.097,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.17300000000000001,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.135,
+                  "z": -0.043,
+                  "radius": 0.043
+                }
+              ]
+            },
+            {
+              "id": "left.massage-2",
+              "x": 0.4,
+              "z": -0.24,
+              "width": 0.5,
+              "depth": 0.22,
+              "cells": [
+                {
+                  "x": -0.17300000000000001,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": -0.097,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": -0.135,
+                  "z": -0.043,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.097,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.17300000000000001,
+                  "z": 0.0215,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.135,
+                  "z": -0.043,
+                  "radius": 0.043
+                }
+              ]
+            },
+            {
+              "id": "left.massage-3",
+              "x": 0.4,
+              "z": 0.49,
+              "width": 0.5,
+              "depth": 0.22,
+              "cells": [
+                {
+                  "x": -0.174,
+                  "z": 0,
+                  "radius": 0.043
+                },
+                {
+                  "x": -0.058,
+                  "z": 0,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.058,
+                  "z": 0,
+                  "radius": 0.043
+                },
+                {
+                  "x": 0.174,
+                  "z": 0,
+                  "radius": 0.043
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "configurationNote": "外观及26cm厚度为照片适配值；按摩按示意图配置，支撑按每侧7路9排圆囊配置，尺寸为展示适配；加热布局待设备规格确认",
+      "appearance": {
+        "collection": "indigoWeave",
+        "bedStyle": "flush",
+        "headboard": "t12",
+        "coverStyle": "tailored",
+        "waistband": false,
+        "surroundAccents": false,
+        "modelLabel": "T12",
+        "materials": {
+          "fabric": {
+            "color": "#142137",
+            "pattern": "t12Rib",
+            "roughness": 0.94,
+            "metalness": 0,
+            "repeat": [
+              1,
+              1
+            ]
+          },
+          "side": {
+            "color": "#17273f",
+            "pattern": "t12Border",
+            "roughness": 0.93,
+            "metalness": 0,
+            "repeat": [
+              1,
+              1
+            ]
+          },
+          "waistband": {
+            "color": "#131f32",
+            "pattern": "t12Tape",
+            "roughness": 0.9,
+            "metalness": 0,
+            "repeat": [
+              4,
+              1
+            ]
+          },
+          "deck": {
+            "color": "#151a22",
+            "roughness": 0.95,
+            "metalness": 0
+          },
+          "leather": {
+            "color": "#292426",
+            "pattern": "smooth",
+            "roughness": 0.72,
+            "metalness": 0,
+            "repeat": [
+              6,
+              3
+            ]
+          },
+          "surround": {
+            "color": "#272225",
+            "pattern": "smooth",
+            "roughness": 0.64,
+            "metalness": 0,
+            "repeat": [
+              6,
+              3
+            ]
+          },
+          "piping": {
+            "color": "#10141d",
+            "roughness": 0.78,
+            "metalness": 0
+          },
+          "brand": {
+            "color": "#bda571",
+            "pattern": "derucciAI",
+            "roughness": 0.76,
+            "metalness": 0.12
+          },
+          "modelMark": {
+            "color": "#bda571",
+            "roughness": 0.76,
+            "metalness": 0.12
+          },
+          "retainer": {
+            "color": "#272225",
+            "pattern": "smooth",
+            "roughness": 0.64
+          },
+          "retainerLogo": {
+            "color": "#bda571",
+            "roughness": 0.76,
+            "metalness": 0.12
+          }
+        }
+      },
+      "fallback": {
+        "image": "packages/smart_mattress_viewer/assets/fallback/t12/base.png",
+        "layers": {
+          "left": "packages/smart_mattress_viewer/assets/fallback/t12/reveal-left.png",
+          "right": "packages/smart_mattress_viewer/assets/fallback/t12/reveal-right.png"
+        },
+        "regions": {
+          "schemaVersion": 1,
+          "modelId": "t12",
+          "modelRevision": 8,
+          "assetRevision": 2,
+          "appearanceKey": "indigoWeave",
+          "width": 1200,
+          "height": 1400,
+          "sideConvention": "supine",
+          "fit": "contain",
+          "pose": {
+            "back": 0,
+            "leg": 0
+          },
+          "camera": {
+            "position": [
+              0,
+              2.88,
+              2.89
+            ],
+            "target": [
+              0,
+              0.56,
+              -0.04
+            ],
+            "fov": 38
+          },
+          "surface": [
+            [
+              0.192138,
+              0.293495
+            ],
+            [
+              0.807862,
+              0.293495
+            ],
+            [
+              0.965304,
+              0.775898
+            ],
+            [
+              0.034696,
+              0.775898
+            ]
+          ],
+          "sidePolygons": {
+            "left": [
+              [
+                0.5,
+                0.293495
+              ],
+              [
+                0.807862,
+                0.293495
+              ],
+              [
+                0.965304,
+                0.775898
+              ],
+              [
+                0.5,
+                0.775898
+              ]
+            ],
+            "right": [
+              [
+                0.192138,
+                0.293495
+              ],
+              [
+                0.5,
+                0.293495
+              ],
+              [
+                0.5,
+                0.775898
+              ],
+              [
+                0.034696,
+                0.775898
+              ]
+            ]
+          },
+          "regions": [
+            {
+              "id": "right.circuit1",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.194432,
+                  0.322945
+                ],
+                [
+                  0.488095,
+                  0.322945
+                ],
+                [
+                  0.487826,
+                  0.344864
+                ],
+                [
+                  0.187546,
+                  0.344864
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.219315,
+                  "y": 0.382977,
+                  "rx": 0.019032999999999994,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.260691,
+                  "y": 0.382977,
+                  "rx": 0.019032999999999967,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.302067,
+                  "y": 0.382977,
+                  "rx": 0.019033000000000022,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.343443,
+                  "y": 0.382977,
+                  "rx": 0.019033000000000022,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.384819,
+                  "y": 0.382977,
+                  "rx": 0.019031999999999993,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.426194,
+                  "y": 0.382977,
+                  "rx": 0.019032999999999967,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.46757,
+                  "y": 0.382977,
+                  "rx": 0.019033000000000022,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "right.circuit2",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.186369,
+                  0.348614
+                ],
+                [
+                  0.487781,
+                  0.348614
+                ],
+                [
+                  0.487151,
+                  0.400066
+                ],
+                [
+                  0.170206,
+                  0.400066
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.212012,
+                  "y": 0.409847,
+                  "rx": 0.01952899999999999,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.254465,
+                  "y": 0.409847,
+                  "rx": 0.01952799999999999,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.296917,
+                  "y": 0.409847,
+                  "rx": 0.01952799999999999,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.339369,
+                  "y": 0.409847,
+                  "rx": 0.01952900000000002,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.381822,
+                  "y": 0.409847,
+                  "rx": 0.01952799999999999,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.424274,
+                  "y": 0.409847,
+                  "rx": 0.01952799999999999,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.466727,
+                  "y": 0.409847,
+                  "rx": 0.01952799999999999,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.20432,
+                  "y": 0.438153,
+                  "rx": 0.02004900000000001,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.247906,
+                  "y": 0.438153,
+                  "rx": 0.02005000000000004,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.291492,
+                  "y": 0.438153,
+                  "rx": 0.020050000000000012,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.335079,
+                  "y": 0.438153,
+                  "rx": 0.020048999999999984,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.378665,
+                  "y": 0.438153,
+                  "rx": 0.020050000000000012,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.422251,
+                  "y": 0.438153,
+                  "rx": 0.020050000000000012,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.465838,
+                  "y": 0.438153,
+                  "rx": 0.02004900000000004,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "right.circuit3",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.168893,
+                  0.404244
+                ],
+                [
+                  0.4871,
+                  0.404244
+                ],
+                [
+                  0.486784,
+                  0.430029
+                ],
+                [
+                  0.160793,
+                  0.430029
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.196205,
+                  "y": 0.468012,
+                  "rx": 0.020600000000000007,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.240987,
+                  "y": 0.468012,
+                  "rx": 0.020600000000000007,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.28577,
+                  "y": 0.468012,
+                  "rx": 0.02059999999999995,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.330552,
+                  "y": 0.468012,
+                  "rx": 0.020600000000000007,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.375335,
+                  "y": 0.468012,
+                  "rx": 0.020600000000000007,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.420118,
+                  "y": 0.468012,
+                  "rx": 0.020600000000000007,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.4649,
+                  "y": 0.468012,
+                  "rx": 0.020600000000000007,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "right.circuit4",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.159405,
+                  0.43445
+                ],
+                [
+                  0.48673,
+                  0.43445
+                ],
+                [
+                  0.486396,
+                  0.461754
+                ],
+                [
+                  0.150828,
+                  0.461754
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.187631,
+                  "y": 0.499556,
+                  "rx": 0.021182000000000006,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.233678,
+                  "y": 0.499556,
+                  "rx": 0.021181000000000005,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.279724,
+                  "y": 0.499556,
+                  "rx": 0.021181000000000005,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.325771,
+                  "y": 0.499556,
+                  "rx": 0.021181000000000005,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.371817,
+                  "y": 0.499556,
+                  "rx": 0.021181000000000005,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.417863,
+                  "y": 0.499556,
+                  "rx": 0.021182000000000034,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.46391,
+                  "y": 0.499556,
+                  "rx": 0.021181000000000005,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "right.circuit5",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.149356,
+                  0.466439
+                ],
+                [
+                  0.486339,
+                  0.466439
+                ],
+                [
+                  0.485984,
+                  0.495399
+                ],
+                [
+                  0.140259,
+                  0.495399
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.17856,
+                  "y": 0.532932,
+                  "rx": 0.02179700000000001,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.225944,
+                  "y": 0.532932,
+                  "rx": 0.021795999999999982,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.273327,
+                  "y": 0.532932,
+                  "rx": 0.02179700000000001,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.320711,
+                  "y": 0.532932,
+                  "rx": 0.021795999999999982,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.368095,
+                  "y": 0.532932,
+                  "rx": 0.021795999999999982,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.415478,
+                  "y": 0.532932,
+                  "rx": 0.021795999999999982,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.462862,
+                  "y": 0.532932,
+                  "rx": 0.021795999999999982,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "right.circuit6",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.138696,
+                  0.500372
+                ],
+                [
+                  0.485923,
+                  0.500372
+                ],
+                [
+                  0.485547,
+                  0.531144
+                ],
+                [
+                  0.12903,
+                  0.531144
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.168947,
+                  "y": 0.568305,
+                  "rx": 0.022447999999999996,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.217748,
+                  "y": 0.568305,
+                  "rx": 0.022447999999999996,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.266548,
+                  "y": 0.568305,
+                  "rx": 0.022447999999999968,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.315349,
+                  "y": 0.568305,
+                  "rx": 0.022448000000000023,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.364149,
+                  "y": 0.568305,
+                  "rx": 0.022448999999999997,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.41295,
+                  "y": 0.568305,
+                  "rx": 0.022448000000000023,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.461751,
+                  "y": 0.568305,
+                  "rx": 0.022447999999999968,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "right.circuit7",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.127368,
+                  0.536434
+                ],
+                [
+                  0.485482,
+                  0.536434
+                ],
+                [
+                  0.484584,
+                  0.609775
+                ],
+                [
+                  0.104329,
+                  0.609775
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.15874,
+                  "y": 0.605859,
+                  "rx": 0.023140999999999995,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.209046,
+                  "y": 0.605859,
+                  "rx": 0.023139999999999994,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.259351,
+                  "y": 0.605859,
+                  "rx": 0.023139999999999994,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.309656,
+                  "y": 0.605859,
+                  "rx": 0.023139999999999994,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.359961,
+                  "y": 0.605859,
+                  "rx": 0.023141000000000023,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.410266,
+                  "y": 0.605859,
+                  "rx": 0.023140999999999967,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.460572,
+                  "y": 0.605859,
+                  "rx": 0.023139999999999994,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.147885,
+                  "y": 0.645802,
+                  "rx": 0.02387600000000001,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.19979,
+                  "y": 0.645802,
+                  "rx": 0.02387700000000001,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.251696,
+                  "y": 0.645802,
+                  "rx": 0.02387600000000001,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.303601,
+                  "y": 0.645802,
+                  "rx": 0.02387699999999998,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.355506,
+                  "y": 0.645802,
+                  "rx": 0.023877000000000037,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.407412,
+                  "y": 0.645802,
+                  "rx": 0.02387600000000001,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.459317,
+                  "y": 0.645802,
+                  "rx": 0.023877000000000037,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "left.circuit1",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.511905,
+                  0.322945
+                ],
+                [
+                  0.805568,
+                  0.322945
+                ],
+                [
+                  0.812454,
+                  0.344864
+                ],
+                [
+                  0.512174,
+                  0.344864
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.53243,
+                  "y": 0.382977,
+                  "rx": 0.019033000000000078,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.573806,
+                  "y": 0.382977,
+                  "rx": 0.019031999999999938,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.615181,
+                  "y": 0.382977,
+                  "rx": 0.019033000000000078,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.656557,
+                  "y": 0.382977,
+                  "rx": 0.019033000000000078,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.697933,
+                  "y": 0.382977,
+                  "rx": 0.019032999999999967,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.739309,
+                  "y": 0.382977,
+                  "rx": 0.019032999999999967,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.780685,
+                  "y": 0.382977,
+                  "rx": 0.019033000000000078,
+                  "ry": 0.009177999999999964,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "left.circuit2",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.512219,
+                  0.348614
+                ],
+                [
+                  0.813631,
+                  0.348614
+                ],
+                [
+                  0.829794,
+                  0.400066
+                ],
+                [
+                  0.512849,
+                  0.400066
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.533273,
+                  "y": 0.409847,
+                  "rx": 0.01952900000000002,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.575726,
+                  "y": 0.409847,
+                  "rx": 0.01952799999999999,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.618178,
+                  "y": 0.409847,
+                  "rx": 0.01952799999999999,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.660631,
+                  "y": 0.409847,
+                  "rx": 0.01952799999999999,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.703083,
+                  "y": 0.409847,
+                  "rx": 0.01952799999999999,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.745535,
+                  "y": 0.409847,
+                  "rx": 0.0195280000000001,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.787988,
+                  "y": 0.409847,
+                  "rx": 0.01952799999999999,
+                  "ry": 0.009664000000000006,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.534162,
+                  "y": 0.438153,
+                  "rx": 0.020050000000000012,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.577749,
+                  "y": 0.438153,
+                  "rx": 0.020049000000000095,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.621335,
+                  "y": 0.438153,
+                  "rx": 0.020050000000000012,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.664921,
+                  "y": 0.438153,
+                  "rx": 0.020050000000000012,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.708508,
+                  "y": 0.438153,
+                  "rx": 0.020048999999999984,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.752094,
+                  "y": 0.438153,
+                  "rx": 0.020050000000000012,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.79568,
+                  "y": 0.438153,
+                  "rx": 0.0200499999999999,
+                  "ry": 0.010189000000000004,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "left.circuit3",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.5129,
+                  0.404244
+                ],
+                [
+                  0.831107,
+                  0.404244
+                ],
+                [
+                  0.839207,
+                  0.430029
+                ],
+                [
+                  0.513216,
+                  0.430029
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.5351,
+                  "y": 0.468012,
+                  "rx": 0.02059999999999995,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.579882,
+                  "y": 0.468012,
+                  "rx": 0.02059999999999995,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.624665,
+                  "y": 0.468012,
+                  "rx": 0.02059999999999995,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.669448,
+                  "y": 0.468012,
+                  "rx": 0.02059999999999995,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.71423,
+                  "y": 0.468012,
+                  "rx": 0.02059999999999995,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.759013,
+                  "y": 0.468012,
+                  "rx": 0.02059999999999995,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.803795,
+                  "y": 0.468012,
+                  "rx": 0.02059999999999995,
+                  "ry": 0.01075799999999999,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "left.circuit4",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.51327,
+                  0.43445
+                ],
+                [
+                  0.840595,
+                  0.43445
+                ],
+                [
+                  0.849172,
+                  0.461754
+                ],
+                [
+                  0.513604,
+                  0.461754
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.53609,
+                  "y": 0.499556,
+                  "rx": 0.021182000000000034,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.582137,
+                  "y": 0.499556,
+                  "rx": 0.021181000000000005,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.628183,
+                  "y": 0.499556,
+                  "rx": 0.021181000000000005,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.674229,
+                  "y": 0.499556,
+                  "rx": 0.021182000000000034,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.720276,
+                  "y": 0.499556,
+                  "rx": 0.021181000000000005,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.766322,
+                  "y": 0.499556,
+                  "rx": 0.021182000000000034,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.812369,
+                  "y": 0.499556,
+                  "rx": 0.021181000000000005,
+                  "ry": 0.01137699999999997,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "left.circuit5",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.513661,
+                  0.466439
+                ],
+                [
+                  0.850644,
+                  0.466439
+                ],
+                [
+                  0.859741,
+                  0.495399
+                ],
+                [
+                  0.514016,
+                  0.495399
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.537138,
+                  "y": 0.532932,
+                  "rx": 0.021796999999999955,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.584522,
+                  "y": 0.532932,
+                  "rx": 0.021796000000000038,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.631905,
+                  "y": 0.532932,
+                  "rx": 0.021796999999999955,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.679289,
+                  "y": 0.532932,
+                  "rx": 0.021795999999999927,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.726673,
+                  "y": 0.532932,
+                  "rx": 0.021796000000000038,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.774056,
+                  "y": 0.532932,
+                  "rx": 0.021796000000000038,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.82144,
+                  "y": 0.532932,
+                  "rx": 0.021796000000000038,
+                  "ry": 0.012052000000000063,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "left.circuit6",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.514077,
+                  0.500372
+                ],
+                [
+                  0.861304,
+                  0.500372
+                ],
+                [
+                  0.87097,
+                  0.531144
+                ],
+                [
+                  0.514453,
+                  0.531144
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.538249,
+                  "y": 0.568305,
+                  "rx": 0.022448000000000023,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.58705,
+                  "y": 0.568305,
+                  "rx": 0.022448000000000023,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.635851,
+                  "y": 0.568305,
+                  "rx": 0.022447999999999912,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.684651,
+                  "y": 0.568305,
+                  "rx": 0.022448000000000023,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.733452,
+                  "y": 0.568305,
+                  "rx": 0.022448000000000023,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.782252,
+                  "y": 0.568305,
+                  "rx": 0.022449000000000052,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.831053,
+                  "y": 0.568305,
+                  "rx": 0.022447999999999912,
+                  "ry": 0.012787000000000104,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "left.circuit7",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.514518,
+                  0.536434
+                ],
+                [
+                  0.872632,
+                  0.536434
+                ],
+                [
+                  0.895671,
+                  0.609775
+                ],
+                [
+                  0.515416,
+                  0.609775
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.539428,
+                  "y": 0.605859,
+                  "rx": 0.023140999999999967,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.589734,
+                  "y": 0.605859,
+                  "rx": 0.02314000000000005,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.640039,
+                  "y": 0.605859,
+                  "rx": 0.02313999999999994,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.690344,
+                  "y": 0.605859,
+                  "rx": 0.02314000000000005,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.740649,
+                  "y": 0.605859,
+                  "rx": 0.023140999999999967,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.790954,
+                  "y": 0.605859,
+                  "rx": 0.023140999999999967,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.84126,
+                  "y": 0.605859,
+                  "rx": 0.02313999999999994,
+                  "ry": 0.013591999999999937,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.540683,
+                  "y": 0.645802,
+                  "rx": 0.02387600000000001,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.592588,
+                  "y": 0.645802,
+                  "rx": 0.023877000000000037,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.644494,
+                  "y": 0.645802,
+                  "rx": 0.02387600000000001,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.696399,
+                  "y": 0.645802,
+                  "rx": 0.02387600000000001,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.748304,
+                  "y": 0.645802,
+                  "rx": 0.023877000000000037,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.80021,
+                  "y": 0.645802,
+                  "rx": 0.02387600000000001,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                },
+                {
+                  "x": 0.852115,
+                  "y": 0.645802,
+                  "rx": 0.023877000000000037,
+                  "ry": 0.014475000000000016,
+                  "shape": "round"
+                }
+              ]
+            },
+            {
+              "id": "right.lumbar",
+              "kind": "heating",
+              "side": "right",
+              "polygon": [
+                [
+                  0.206982,
+                  0.412701
+                ],
+                [
+                  0.45492,
+                  0.412701
+                ],
+                [
+                  0.452034,
+                  0.480733
+                ],
+                [
+                  0.18822,
+                  0.480733
+                ]
+              ]
+            },
+            {
+              "id": "right.leg",
+              "kind": "heating",
+              "side": "right",
+              "polygon": [
+                [
+                  0.154276,
+                  0.603813
+                ],
+                [
+                  0.446812,
+                  0.603813
+                ],
+                [
+                  0.441555,
+                  0.727699
+                ],
+                [
+                  0.12011,
+                  0.727699
+                ]
+              ]
+            },
+            {
+              "id": "left.lumbar",
+              "kind": "heating",
+              "side": "left",
+              "polygon": [
+                [
+                  0.54508,
+                  0.412701
+                ],
+                [
+                  0.793018,
+                  0.412701
+                ],
+                [
+                  0.81178,
+                  0.480733
+                ],
+                [
+                  0.547966,
+                  0.480733
+                ]
+              ]
+            },
+            {
+              "id": "left.leg",
+              "kind": "heating",
+              "side": "left",
+              "polygon": [
+                [
+                  0.553188,
+                  0.603813
+                ],
+                [
+                  0.845724,
+                  0.603813
+                ],
+                [
+                  0.87989,
+                  0.727699
+                ],
+                [
+                  0.558445,
+                  0.727699
+                ]
+              ]
+            },
+            {
+              "id": "right",
+              "kind": "massage",
+              "side": "right",
+              "polygon": [
+                [
+                  0.236735,
+                  0.343
+                ],
+                [
+                  0.439247,
+                  0.343
+                ],
+                [
+                  0.436634,
+                  0.385699
+                ],
+                [
+                  0.225412,
+                  0.385699
+                ]
+              ]
+            },
+            {
+              "id": "right",
+              "kind": "massage",
+              "side": "right",
+              "polygon": [
+                [
+                  0.219937,
+                  0.406346
+                ],
+                [
+                  0.43537,
+                  0.406346
+                ],
+                [
+                  0.432405,
+                  0.4548
+                ],
+                [
+                  0.207088,
+                  0.4548
+                ]
+              ]
+            },
+            {
+              "id": "right",
+              "kind": "massage",
+              "side": "right",
+              "polygon": [
+                [
+                  0.172228,
+                  0.586261
+                ],
+                [
+                  0.42436,
+                  0.586261
+                ],
+                [
+                  0.420267,
+                  0.653153
+                ],
+                [
+                  0.15449,
+                  0.653153
+                ]
+              ]
+            },
+            {
+              "id": "left",
+              "kind": "massage",
+              "side": "left",
+              "polygon": [
+                [
+                  0.560753,
+                  0.343
+                ],
+                [
+                  0.763265,
+                  0.343
+                ],
+                [
+                  0.774588,
+                  0.385699
+                ],
+                [
+                  0.563366,
+                  0.385699
+                ]
+              ]
+            },
+            {
+              "id": "left",
+              "kind": "massage",
+              "side": "left",
+              "polygon": [
+                [
+                  0.56463,
+                  0.406346
+                ],
+                [
+                  0.780063,
+                  0.406346
+                ],
+                [
+                  0.792912,
+                  0.4548
+                ],
+                [
+                  0.567595,
+                  0.4548
+                ]
+              ]
+            },
+            {
+              "id": "left",
+              "kind": "massage",
+              "side": "left",
+              "polygon": [
+                [
+                  0.57564,
+                  0.586261
+                ],
+                [
+                  0.827772,
+                  0.586261
+                ],
+                [
+                  0.84551,
+                  0.653153
+                ],
+                [
+                  0.579733,
+                  0.653153
+                ]
+              ]
+            }
+          ],
+          "imageSha256": "a9bd8167fc0e39e977d6a143c6f66d033c372341b0a9546530f762a24b6c122e",
+          "layerSha256": {
+            "left": "924a83fd17bba479dde8c336c6966842632321b0f6088e27458feb503e593976",
+            "right": "02c5e588883d8240fd1346fc75f2b1579e35993af09049cfcccadb7329a898db"
+          }
+        }
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "revision": 1,
+      "template": "articulated-160x190",
+      "sideConvention": "supine",
+      "regions": [
+        {
+          "id": "right.shoulder",
+          "name": "肩背",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "right.lumbar",
+          "name": "腰部",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "right.hip",
+          "name": "臀部",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "right.leg",
+          "name": "腿部",
+          "side": 0,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.shoulder",
+          "name": "肩背",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.lumbar",
+          "name": "腰部",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.hip",
+          "name": "臀部",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        },
+        {
+          "id": "left.leg",
+          "name": "腿部",
+          "side": 1,
+          "range": [
+            0,
+            100
+          ],
+          "unit": "level"
+        }
+      ],
+      "airbags": [
+        {
+          "id": "right.shoulder",
+          "regionId": "right.shoulder",
+          "side": 0,
+          "zone": 0,
+          "x": -0.39,
+          "z": -0.6,
+          "width": 0.65,
+          "depth": 0.378,
+          "spreadX": 0.3,
+          "spread": 0.21,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057
+        },
+        {
+          "id": "right.lumbar",
+          "regionId": "right.lumbar",
+          "side": 0,
+          "zone": 1,
+          "x": -0.39,
+          "z": -0.17,
+          "width": 0.65,
+          "depth": 0.261,
+          "spreadX": 0.3,
+          "spread": 0.145,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057
+        },
+        {
+          "id": "right.hip",
+          "regionId": "right.hip",
+          "side": 0,
+          "zone": 2,
+          "x": -0.39,
+          "z": 0.19,
+          "width": 0.65,
+          "depth": 0.30600000000000005,
+          "spreadX": 0.3,
+          "spread": 0.17,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057
+        },
+        {
+          "id": "right.leg",
+          "regionId": "right.leg",
+          "side": 0,
+          "zone": 3,
+          "x": -0.39,
+          "z": 0.63,
+          "width": 0.65,
+          "depth": 0.378,
+          "spreadX": 0.3,
+          "spread": 0.21,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057
+        },
+        {
+          "id": "left.shoulder",
+          "regionId": "left.shoulder",
+          "side": 1,
+          "zone": 0,
+          "x": 0.39,
+          "z": -0.6,
+          "width": 0.65,
+          "depth": 0.378,
+          "spreadX": 0.3,
+          "spread": 0.21,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057
+        },
+        {
+          "id": "left.lumbar",
+          "regionId": "left.lumbar",
+          "side": 1,
+          "zone": 1,
+          "x": 0.39,
+          "z": -0.17,
+          "width": 0.65,
+          "depth": 0.261,
+          "spreadX": 0.3,
+          "spread": 0.145,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057
+        },
+        {
+          "id": "left.hip",
+          "regionId": "left.hip",
+          "side": 1,
+          "zone": 2,
+          "x": 0.39,
+          "z": 0.19,
+          "width": 0.65,
+          "depth": 0.30600000000000005,
+          "spreadX": 0.3,
+          "spread": 0.17,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057
+        },
+        {
+          "id": "left.leg",
+          "regionId": "left.leg",
+          "side": 1,
+          "zone": 3,
+          "x": 0.39,
+          "z": 0.63,
+          "width": 0.65,
+          "depth": 0.378,
+          "spreadX": 0.3,
+          "spread": 0.21,
+          "maxLift": 0.055,
+          "bottom": 0.066,
+          "minHalfHeight": 0.025,
+          "halfHeightRange": 0.057
+        }
+      ],
+      "heating": [
+        {
+          "id": "right.lumbar",
+          "side": 0,
+          "region": 0,
+          "z": -0.17,
+          "depth": 0.3,
+          "x": -0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腰部"
+        },
+        {
+          "id": "right.leg",
+          "side": 0,
+          "region": 1,
+          "z": 0.63,
+          "depth": 0.38,
+          "x": -0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腿部"
+        },
+        {
+          "id": "left.lumbar",
+          "side": 1,
+          "region": 0,
+          "z": -0.17,
+          "depth": 0.3,
+          "x": 0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腰部"
+        },
+        {
+          "id": "left.leg",
+          "side": 1,
+          "region": 1,
+          "z": 0.63,
+          "depth": 0.38,
+          "x": 0.39,
+          "width": 0.5720000000000001,
+          "maxLevel": 3,
+          "name": "腿部"
+        }
+      ],
+      "input": {
+        "format": "canonical-v1"
+      },
+      "presentation": {
+        "scanMs": 950,
+        "flightMs": 1150,
+        "coverOpacity": 0.38
+      },
+      "id": "generic",
+      "name": "通用床垫",
+      "status": "generic",
+      "appearance": {
+        "collection": "ivory",
+        "bedStyle": "flush",
+        "headboard": "cushion",
+        "waistband": false,
+        "surroundAccents": false,
+        "modelLabel": "GENERIC"
+      },
+      "massage": [],
+      "fallback": {
+        "image": "packages/smart_mattress_viewer/assets/fallback/generic/base.png",
+        "layers": {
+          "left": "packages/smart_mattress_viewer/assets/fallback/generic/reveal-left.png",
+          "right": "packages/smart_mattress_viewer/assets/fallback/generic/reveal-right.png"
+        },
+        "regions": {
+          "schemaVersion": 1,
+          "modelId": "generic",
+          "modelRevision": 1,
+          "assetRevision": 2,
+          "appearanceKey": "ivory",
+          "width": 1200,
+          "height": 1400,
+          "sideConvention": "supine",
+          "fit": "contain",
+          "pose": {
+            "back": 0,
+            "leg": 0
+          },
+          "camera": {
+            "position": [
+              0,
+              2.88,
+              2.89
+            ],
+            "target": [
+              0,
+              0.56,
+              -0.04
+            ],
+            "fov": 38
+          },
+          "surface": [
+            [
+              0.194294,
+              0.30778
+            ],
+            [
+              0.805706,
+              0.30778
+            ],
+            [
+              0.960398,
+              0.792326
+            ],
+            [
+              0.039602,
+              0.792326
+            ]
+          ],
+          "sidePolygons": {
+            "left": [
+              [
+                0.5,
+                0.30778
+              ],
+              [
+                0.805706,
+                0.30778
+              ],
+              [
+                0.960398,
+                0.792326
+              ],
+              [
+                0.5,
+                0.792326
+              ]
+            ],
+            "right": [
+              [
+                0.194294,
+                0.30778
+              ],
+              [
+                0.5,
+                0.30778
+              ],
+              [
+                0.5,
+                0.792326
+              ],
+              [
+                0.039602,
+                0.792326
+              ]
+            ]
+          },
+          "regions": [
+            {
+              "id": "right.shoulder",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.218768,
+                  0.335843
+                ],
+                [
+                  0.474433,
+                  0.335843
+                ],
+                [
+                  0.472544,
+                  0.408669
+                ],
+                [
+                  0.197988,
+                  0.408669
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.343667,
+                  "y": 0.402242,
+                  "rx": 0.11464400000000002,
+                  "ry": 0.03506500000000001,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "right.lumbar",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.191321,
+                  0.432037
+                ],
+                [
+                  0.471938,
+                  0.432037
+                ],
+                [
+                  0.470395,
+                  0.491551
+                ],
+                [
+                  0.17434,
+                  0.491551
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.330116,
+                  "y": 0.493433,
+                  "rx": 0.12458199999999997,
+                  "ry": 0.02835399999999999,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "right.hip",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.169002,
+                  0.510256
+                ],
+                [
+                  0.469909,
+                  0.510256
+                ],
+                [
+                  0.467798,
+                  0.591638
+                ],
+                [
+                  0.145781,
+                  0.591638
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.316823,
+                  "y": 0.582888,
+                  "rx": 0.13433,
+                  "ry": 0.03890400000000005,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "right.leg",
+              "kind": "air",
+              "side": "right",
+              "polygon": [
+                [
+                  0.13764,
+                  0.620171
+                ],
+                [
+                  0.467058,
+                  0.620171
+                ],
+                [
+                  0.463854,
+                  0.743709
+                ],
+                [
+                  0.102391,
+                  0.743709
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.297452,
+                  "y": 0.713244,
+                  "rx": 0.14853500000000003,
+                  "ry": 0.05944700000000003,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "left.shoulder",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.525567,
+                  0.335843
+                ],
+                [
+                  0.781232,
+                  0.335843
+                ],
+                [
+                  0.802012,
+                  0.408669
+                ],
+                [
+                  0.527456,
+                  0.408669
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.656333,
+                  "y": 0.402242,
+                  "rx": 0.11464399999999997,
+                  "ry": 0.03506500000000001,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "left.lumbar",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.528062,
+                  0.432037
+                ],
+                [
+                  0.808679,
+                  0.432037
+                ],
+                [
+                  0.82566,
+                  0.491551
+                ],
+                [
+                  0.529605,
+                  0.491551
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.669884,
+                  "y": 0.493433,
+                  "rx": 0.12458099999999994,
+                  "ry": 0.02835399999999999,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "left.hip",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.530091,
+                  0.510256
+                ],
+                [
+                  0.830998,
+                  0.510256
+                ],
+                [
+                  0.854219,
+                  0.591638
+                ],
+                [
+                  0.532202,
+                  0.591638
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.683177,
+                  "y": 0.582888,
+                  "rx": 0.13432999999999995,
+                  "ry": 0.03890400000000005,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "left.leg",
+              "kind": "air",
+              "side": "left",
+              "polygon": [
+                [
+                  0.532942,
+                  0.620171
+                ],
+                [
+                  0.86236,
+                  0.620171
+                ],
+                [
+                  0.897609,
+                  0.743709
+                ],
+                [
+                  0.536146,
+                  0.743709
+                ]
+              ],
+              "cells": [
+                {
+                  "x": 0.702548,
+                  "y": 0.713244,
+                  "rx": 0.14853500000000008,
+                  "ry": 0.05944700000000003,
+                  "shape": "pouch"
+                }
+              ]
+            },
+            {
+              "id": "right.lumbar",
+              "kind": "heating",
+              "side": "right",
+              "polygon": [
+                [
+                  0.20929,
+                  0.427838
+                ],
+                [
+                  0.455275,
+                  0.427838
+                ],
+                [
+                  0.452436,
+                  0.496262
+                ],
+                [
+                  0.190832,
+                  0.496262
+                ]
+              ]
+            },
+            {
+              "id": "right.leg",
+              "kind": "heating",
+              "side": "right",
+              "polygon": [
+                [
+                  0.157486,
+                  0.619874
+                ],
+                [
+                  0.447305,
+                  0.619874
+                ],
+                [
+                  0.442151,
+                  0.744068
+                ],
+                [
+                  0.123982,
+                  0.744068
+                ]
+              ]
+            },
+            {
+              "id": "left.lumbar",
+              "kind": "heating",
+              "side": "left",
+              "polygon": [
+                [
+                  0.544725,
+                  0.427838
+                ],
+                [
+                  0.79071,
+                  0.427838
+                ],
+                [
+                  0.809168,
+                  0.496262
+                ],
+                [
+                  0.547564,
+                  0.496262
+                ]
+              ]
+            },
+            {
+              "id": "left.leg",
+              "kind": "heating",
+              "side": "left",
+              "polygon": [
+                [
+                  0.552695,
+                  0.619874
+                ],
+                [
+                  0.842514,
+                  0.619874
+                ],
+                [
+                  0.876018,
+                  0.744068
+                ],
+                [
+                  0.557849,
+                  0.744068
+                ]
+              ]
+            }
+          ],
+          "imageSha256": "fcd5078f22b8129f18d7df4752af6633febc559e3c05377cea7ce22b382bcb43",
+          "layerSha256": {
+            "left": "39d534a35619d01616f243ffe0b9f9d6fac23ff6ed9c94b5395307cfd3b52cd2",
+            "right": "c34a1af47e5902c32bafac445cf981fe299afdfa536c147d90ccffbda0706d7b"
+          }
+        }
+      }
+    }
+  ]
+}

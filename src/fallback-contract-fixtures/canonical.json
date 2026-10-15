@@ -1,0 +1,19 @@
+{
+ "schemaVersion":1,
+ "cases":[
+  {"name":"zero survives and snapshot omission becomes unknown","model":"t11-plus","steps":[
+   {"payload":{"air":{"left.shoulder":{"value":40,"status":"inflating"}}},"options":{"kind":"snapshot","sequence":4,"normalized":true},"expected":{"ignored":false}},
+   {"payload":{"air":{"left.shoulder":{"value":0}}},"options":{"kind":"snapshot","sequence":5,"normalized":true},"expected":{"ignored":false},"checks":{"air.left.shoulder.value":0,"air.left.shoulder.status":null,"pose.back":null,"sequence":5}}]},
+  {"name":"patch null and missing","model":"t11-plus","steps":[
+   {"payload":{"pose":{"back":12,"leg":8}},"options":{"kind":"snapshot","sequence":1,"normalized":true},"expected":{"ignored":false}},
+   {"payload":{"pose":{"back":null}},"options":{"kind":"patch","sequence":2,"normalized":true},"expected":{"ignored":false},"checks":{"pose.back":null,"pose.leg":8}}]},
+  {"name":"sequence and atomic rejection","model":"t12","steps":[
+   {"payload":{"pose":{"back":10}},"options":{"kind":"patch","normalized":true},"error":"SNAPSHOT_REQUIRED"},
+   {"payload":{"pose":{"back":10}},"options":{"kind":"snapshot","sequence":7,"normalized":true},"expected":{"ignored":false}},
+   {"payload":{"pose":{"back":20}},"options":{"kind":"patch","sequence":7,"normalized":true},"expected":{"ignored":true},"checks":{"pose.back":10}},
+   {"payload":{"pose":{"back":20}},"options":{"kind":"patch","sequence":9,"normalized":true},"error":"RESYNC_REQUIRED","checks":{"pose.back":10,"sequence":7}},
+   {"payload":{"air":{"left.circuit1":{"value":50},"right.circuit7":{"value":101}}},"options":{"kind":"patch","sequence":8,"normalized":true},"error":"INVALID_STATE","checks":{"air.left.circuit1.value":null,"sequence":7}}]},
+  {"name":"no invented T11 leg circuit","model":"t11-plus","steps":[
+   {"payload":{"air":{"left.leg":{"value":50}}},"options":{"kind":"snapshot","normalized":true},"error":"UNKNOWN_REGION"}]}
+ ]
+}

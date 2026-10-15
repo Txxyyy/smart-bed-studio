@@ -194,7 +194,8 @@ function animate(ms){
   const nextReveal=autoDemo?showroomDemoReveal(demoFrame,reducedMotion.matches):sampleAirReveal(firmnessSelection,airTransition,ms,reducedMotion.matches);
   if(nextReveal.phase!==airReveal.phase||nextReveal.side!==airReveal.side)changed=true;
   airReveal=nextReveal;bed.coverReveal.update(airReveal);
-  firmnessEffect.root.visible=!!firmnessSelection&&['scan','adjust','closing'].includes(airReveal.phase);
+  // Match the SDK: reveal and pressure motion remain, while the additive highlights stay hidden.
+  firmnessEffect.root.visible=false;
   for(const k of ['back','leg','xray','explode']){if(Math.abs(target[k]-current[k])>0.0002){current[k]+= (target[k]-current[k])*ease;changed=true;}}
   for(let s=0;s<2;s++)for(let z=0;z<4;z++){
     if(!airReveal.ready)continue;
@@ -379,7 +380,7 @@ function beginFirmness(zone, animateEffect=true,kind='air') {
     lastAirInput=now;
   }else airTransition=null;
   airReveal=autoDemo&&demoFrame?showroomDemoReveal(demoFrame,reducedMotion.matches):sampleAirReveal(firmnessSelection,airTransition,now,reducedMotion.matches);
-  firmnessEffect.root.visible=['scan','adjust','closing'].includes(airReveal.phase);
+  firmnessEffect.root.visible=false;
   $('#projection-label').textContent=`${SIDE_NAMES[activeSide]} · 分区调节`;
   $('#status-right').textContent='独立分区控制';updateFirmnessHUD(performance.now());
 }

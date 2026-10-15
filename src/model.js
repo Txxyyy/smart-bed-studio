@@ -1,4 +1,4 @@
-import { roundAirRow } from './air-shape.js';
+import { roundAirRow, roundAirMaterial } from './air-shape.js';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { buildSpine, sampleSpine, mapPoint, ZONES } from './kinematics.js';
@@ -139,14 +139,14 @@ export class SmartBed {
     for(const definition of this.airLayout) {
       const {side:sideIndex,zone,width,depth}=definition;
       const group=new THREE.Group();group.name=`Airbag_${sideIndex===0?'L':'R'}_${definition.id}`;this.airGroup.add(group);
-      const mat=new THREE.MeshStandardMaterial({color:sideIndex===0?0x40ae9a:0x4d91b8,roughness:0.58,metalness:0.04,emissive:sideIndex===0?0x08392e:0x092536,emissiveIntensity:0.25});
+      const mat=definition.shape==='round-array'?roundAirMaterial():new THREE.MeshStandardMaterial({color:sideIndex===0?0x40ae9a:0x4d91b8,roughness:0.58,metalness:0.04,emissive:sideIndex===0?0x08392e:0x092536,emissiveIntensity:0.25});
       const cell=mesh(definition.shape==='round-array'?roundAirRow(width,depth):new RoundedBoxGeometry(width,.12,depth,2,Math.min(.047,width*.2,depth*.2)),mat,group,definition.shape==='round-array'?'Circular_Air_Array':'Rounded_Rectangular_Air_Pouch');
       cell.userData.rest=Array.from(cell.geometry.attributes.position.array);
-      const sealMaterial=new THREE.MeshStandardMaterial({color:sideIndex===0?0x277f70:0x316480,roughness:.73,metalness:.05});
+      const sealMaterial=definition.shape==='round-array'?roundAirMaterial({seal:true}):new THREE.MeshStandardMaterial({color:sideIndex===0?0x277f70:0x316480,roughness:.73,metalness:.05});
       const seal=definition.shape==='round-array'?mesh(roundAirRow(width,depth,7,true),sealMaterial,group,'Circular_Sealed_Edges'):perimeterTube(group,'Heat_Sealed_Rectangular_Edge',width+.008,depth+.008,0,0,.052,.0025,sealMaterial);
       seal.userData.rest=Array.from(seal.geometry.attributes.position.array);
       const valve=box(group,'Valve',0.037,0.028,0.05,0,0,0,metal,0.008);
-      const showroomMat=new THREE.MeshStandardMaterial({color:sideIndex===0?0x165758:0x164355,emissive:sideIndex===0?0x0b5046:0x0b324e,emissiveIntensity:.3,roughness:.45,metalness:.18});
+      const showroomMat=definition.shape==='round-array'?roundAirMaterial({showroom:true}):new THREE.MeshStandardMaterial({color:sideIndex===0?0x165758:0x164355,emissive:sideIndex===0?0x0b5046:0x0b324e,emissiveIntensity:.3,roughness:.45,metalness:.18});
       this.airbags.push({...definition,group,cells:[cell],seal,valve,side:sideIndex,zone,mat,showroomMat,halfHeight:.057});
     }
     this.tubes=[];

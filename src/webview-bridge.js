@@ -1,6 +1,6 @@
 import { invokeModel } from './model-dispatch.js';
 export const BRIDGE_VERSION = 1;
-export const RESOURCE_VERSION = '1.0.0';
+export const RESOURCE_VERSION = '1.1.0';
 const globalMethods = new Set(['listModels','registerModel','setModel','setVisible','setPerformanceMode','getPerformanceStats','resize','dispose']);
 const fail=(code,message)=>{throw Object.assign(new Error(message),{code});};
 
@@ -10,7 +10,7 @@ export class WebViewBridge {
     this.cache=new Map();this.cacheLimit=cacheLimit;this.modelToken=null;this.loading=false;this.generation=0;this.disposed=false;
     this.unsubscribe=viewer.on('*',event=>this.event(event.type,event,event.modelToken??this.modelToken));
   }
-  info(){return {protocolVersion:BRIDGE_VERSION,resourceVersion:RESOURCE_VERSION,instanceId:this.instanceId,modelToken:this.modelToken,loading:this.loading,capabilities:{webgl2:true,offlineBundle:true}};}
+  info(){return {protocolVersion:BRIDGE_VERSION,resourceVersion:RESOURCE_VERSION,instanceId:this.instanceId,modelToken:this.modelToken,loading:this.loading,capabilities:{webgl2:true,offlineBundle:true,presentationBarrier:true}};}
   post(message){this.send({...message,protocolVersion:BRIDGE_VERSION,instanceId:this.instanceId});}
   event(name,data={},modelToken=this.modelToken){this.post({type:'event',name,data,modelToken});}
   ready(){this.event('bridge.ready',this.info());}
@@ -47,7 +47,8 @@ export class WebViewBridge {
       if(!this.modelToken)fail('MODEL_NOT_READY','请先设置型号');
       if(modelToken!==this.modelToken)fail('STALE_MODEL','调用属于已切换的型号会话');
     }
-    if(method==='dispose'){this.disposed=true;this.unsubscribe();}
+    if(method==='bridge.present')return this.viewer.requestPresentation({...args[0],modelToken});
+    if(method==='dispose'){this.disposed=true;++this.generation;this.unsubscribe();}
     return invokeModel(this.viewer,method,args);
   }
 }

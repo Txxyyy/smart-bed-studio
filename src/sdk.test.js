@@ -83,7 +83,7 @@ test('dynamic pouches and independent heat follow the same surface at flat/max p
   for(const style of ['wide','flush'])for(const [back,leg] of [[0,0],[65,35]]){
     bed.setSurroundStyle(style);bed.update({...values,back,leg,xray:0,explode:0,showroom:true,airReveal:{phase:'adjust',side:'left',progress:1}});
     air.root.visible=heat.root.visible=true;air.update({spine:bed.spine,pressures:values.pressures,selection:{side:'left',kind:'air',activeRegionIds:['left.lumbar']},time:1,moving:true});heat.update({spine:bed.spine,...values,time:1,moving:true});
-    assert.equal(air.entries.filter(e=>e.pulse.visible).length,2);
+    assert.equal(air.surface.entries.filter(e=>e.mesh.visible).length,2);
     for(const root of [bed.root,air.root,heat.root])root.traverse(o=>{if(o.geometry)assert.ok([...o.geometry.attributes.position.array].every(Number.isFinite));});
   }
   const bag=p.airbags[0];assert.ok(surfaceLift(bag.x,bag.z,values.pressures,p.airbags)>0);

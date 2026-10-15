@@ -26,7 +26,7 @@ test('each T11+ circuit inflates and highlights all its bags, preserving the opp
     bed.setSurroundStyle(style);bed.update({...values,back,leg:back?35:0,explode:0,xray:0,showroom:true,airReveal:{phase:'adjust',side:region.side?'left':'right',progress:1}});
     effect.update({spine:bed.spine,pressures:values.pressures,selection:{activeRegionIds:[region.id],side:region.side?'left':'right'},time:1,moving:true});
     const expected=profile.airbags.filter(b=>b.regionId===region.id);
-    assert.equal(effect.entries.filter(e=>e.pulse.visible).length,expected.length);
+    assert.equal(effect.surface.entries.filter(e=>e.mesh.visible).length,expected.length);
     for(const bag of profile.airbags)assert.equal(values.pressures[bag.side][bag.zone],bag.regionId===region.id?75:0);
     for(const b of bed.airbags)for(const cell of b.cells)assert.ok(cell.geometry.attributes.position.array.every(Number.isFinite));
     assert.ok(bed.cover.geometry.attributes.position.array.every(Number.isFinite));

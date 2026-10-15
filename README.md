@@ -30,10 +30,10 @@ cd smart-bed-studio
 ### 环境要求
 
 - 当前包声明 Flutter >=3.13、Dart >=3.1，依赖 `webview_flutter >=4.4.4 <5.0.0`；本次验证使用 Flutter 3.13.9 / Dart 3.1.5，不代表全部版本组合均已验证。
-- 支持 Android / iOS。模型必须能够创建 **WebGL 2**；构建基线为 Chromium 111+ / Safari 16.4+。
+- 支持 Android / iOS。3D 路径要求 **WebGL 2**，构建基线为 Chromium 111+ / Safari 16.4+；原生 2D / 静态路径不创建 WebView，不要求上述内核能力。
 - Android 示例 minSdk 24，开启硬件加速。请核对现有 App 的 Manifest 和目标设备实际 WebView 内核；Android 版本高不等于内核一定满足要求。
 - iOS 示例最低版本 16.4；现有 App 的 Runner 与 Podfile 部署目标需一致，执行 CocoaPods 安装。
-- 小米电视需要按具体型号和系统验证；该组件不替换电视 WebView 内核。Flutter Web/桌面端不属于当前封装范围。
+- 自动选择不依赖电视型号清单，Flutter 根据实际加载结果选择后端；该组件不替换 WebView 内核，也不扩展 Flutter 的平台支持范围。Flutter Web/桌面端不属于当前封装范围，电视体验仍需实机验证。
 
 ### 添加依赖
 
@@ -91,6 +91,7 @@ class _BedModelPanelState extends State<BedModelPanel> {
     height: 360,
     child: MattressView(
       controller: controller,
+      renderPolicy: RenderPolicy.auto,
       visible: widget.visible,
       onReady: () async {
         final session = await controller.setModel(widget.modelId);
@@ -124,7 +125,7 @@ class _BedModelPanelState extends State<BedModelPanel> {
 3. 保留 App 自己的最新完整状态缓存；页面恢复、断线恢复和模型重载时重新同步。
 4. 切设备时取消旧订阅，再建立新会话；即使两台设备型号相同也要重新 `setModel`。
 
-以下是业务层连接示意，`initialSnapshot` 和 `parsedDeviceUpdates` 均由现有 App 提供，不是组件内置数据源：
+以下仅演示固定 Session 的捕获，async listen 不会串行等待 Future，也未处理快照期间更新；不能直接作为可靠生产订阅。完整顺序与缓冲示例见 [接入说明](docs/FLUTTER_INTEGRATION.md#9-自动降级与订阅迁移)。`initialSnapshot` 和 `parsedDeviceUpdates` 均由现有 App 提供，不是组件内置数据源：
 
 ```dart
 final boundSession = await controller.setModel(deviceModel);
@@ -207,7 +208,7 @@ flutter run -d <设备ID>
 
 交付前请在目标真机检查：首次离线加载、型号/设备切换、双侧效果叠加、前后台及 Tab 切换、断线恢复、页面反复创建销毁，以及持续运行的帧率和温升。门店电视还需要验证目标分辨率、遥控操作和实际 WebView 内核。
 
-本版已有 108 项 JS 测试、14 项 Flutter 测试、静态分析与构建记录；Android debug APK 构建成功，iOS 18.6 模拟器已验证型号切换与叠加效果。尚未完成 Android/iOS 真机、小米电视及真实 MQTT 联调；详情见[验证记录](flutter/smart_mattress_viewer/VALIDATION.md)。
+当前版本的自动测试、静态分析、构建及模拟器检查范围以[验证记录](flutter/smart_mattress_viewer/VALIDATION.md)为准。历史 3D 验证不代表新增降级功能已实机验收；Android/iOS 真机、电视及真实 MQTT 联调需分别记录。
 
 ## 7. 模型维护与资源更新
 
@@ -234,3 +235,17 @@ npm run build:flutter
 | `work/` / `dist/` | 临时验证/构建输出，不作为源码编辑 |
 
 网页开发使用 `npm run dev`：`/` 为展示控制页，`/?embed=1` 为纯模型，`/?studio=1` 为原设计工作台。历史材质、机构、导出及 V.12–V.19 说明保留在 [MODEL_HISTORY.md](docs/MODEL_HISTORY.md)。当前型号、区域与 App 左右定义以本 README 和接口文档为准。
+
+## 原生降级展示
+
+Flutter 可显式选择 `RenderPolicy.auto`，先显示离线床垫图并尝试 3D，失败后使用原生分区光效。`twoD` 和 `staticImage` 不创建 WebView；未指定策略仍保留原来的 threeD。自动选择无需提供电视型号，不能替代后续目标设备体验验证。
+
+- [模式、切换和接口能力](docs/RENDER_FALLBACK.md)
+- [静态资源制作与版本检查](docs/FALLBACK_ASSETS.md)
+- [重复 onReady 与业务订阅迁移](docs/FLUTTER_INTEGRATION.md#9-自动降级与订阅迁移)
+
+升级自动模式前，App 必须在每次后端就绪时取消旧展示订阅、重建固定 Session 并提交最新快照；详情页不能继续使用旧 Session。
+
+### 降级视觉对比
+
+运行 `npm run dev`，访问 http://127.0.0.1:5173/fallback-compare.html?mode=2d ，切换 T12 的原有 3D 与固定床尾俯视二维，体验左右侧支撑柔光、加热和按摩。原生资源制作见 `docs/FALLBACK_ASSETS.md`。网页是视觉评审入口，电视兼容性仍需实际终端验证。

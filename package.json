@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test src/*.test.js",
-    "build:flutter": "vite build --config vite.embed.config.js && node scripts/package-flutter.mjs"
+    "build:flutter": "vite build --config vite.embed.config.js && node scripts/package-flutter.mjs",
+    "export:fallback": "node scripts/export-fallback-assets.mjs",
+    "export:catalog": "node scripts/export-model-catalog.mjs"
   },
   "dependencies": {
     "three": "0.185.1"
