@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: 模型 / SDK（Node）
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+      - name: Flutter 离线资源与包内文档必须与源码一致
+        run: |
+          npm run build:flutter
+          git diff --exit-code -- flutter/smart_mattress_viewer \
+            || (echo "::error::请运行 npm run build:flutter 并提交生成结果" && exit 1)
+
+  flutter:
+    name: Flutter 组件
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: flutter/smart_mattress_viewer
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          # 与 VALIDATION.md 记录的验证版本一致；升级时同步更新记录
+          flutter-version: 3.13.9
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed lib test example/lib
+      - run: flutter analyze
+      - run: flutter test
+      - name: 示例工程静态分析
+        working-directory: flutter/smart_mattress_viewer/example
+        run: |
+          flutter pub get
+          flutter analyze

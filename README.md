@@ -216,10 +216,11 @@ flutter run -d <设备ID>
 ```sh
 # Node.js 版本见 .nvmrc：24.16.0
 npm ci
-npm test
-npm run build
+npm run check          # lint + 格式检查 + 测试 + 构建
 npm run build:flutter
 ```
+
+代码格式由 Prettier 统一（`npm run format` 自动修正），ESLint 检查常见错误；GitHub Actions 在推送和 PR 上复核，并运行 Flutter analyze / test。
 
 `build:flutter` 从源码生成离线 HTML，并同步到组件 `assets/`，同时生成协议版本、型号 revision 和 SHA-256 清单。更新模型后一起交付 Dart 包和 assets，保持版本兼容；不要只复制 dist 文件。现有离线包不提供在线代码热更新。
 
@@ -232,5 +233,6 @@ npm run build:flutter
 | `references/` | 产品原始参考资料，保持原样 |
 | `exports/` | 历史交付，不反向同步源码 |
 | `work/` / `dist/` | 临时验证/构建输出，不作为源码编辑 |
+| `AGENTS.md` / `CLAUDE.md` / `.claude/` | Codex 与 Claude Code 协作规则及云端环境，见 [协作约定](docs/AGENT_COLLABORATION.md) |
 
 网页开发使用 `npm run dev`：`/` 为展示控制页，`/?embed=1` 为纯模型，`/?studio=1` 为原设计工作台。历史材质、机构、导出及 V.12–V.19 说明保留在 [MODEL_HISTORY.md](docs/MODEL_HISTORY.md)。当前型号、区域与 App 左右定义以本 README 和接口文档为准。

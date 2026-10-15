@@ -102,8 +102,8 @@ class MattressController {
           if (error is Map &&
               error['code'] is String &&
               error['message'] is String) {
-            pending.result.completeError(
-                MattressException(error['code'], error['message']));
+            pending.result.completeError(MattressException(
+                error['code'] as String, error['message'] as String));
           } else {
             pending.result.completeError(
                 const MattressException('INVALID_RESPONSE', '桥接返回格式无效'));

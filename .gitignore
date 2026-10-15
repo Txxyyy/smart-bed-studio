@@ -10,3 +10,6 @@ work/
 # Local browser checks and generated screenshots
 .playwright-cli/
 output/
+
+# Agent 本地个人设置（Claude Code / Codex），不入库
+.claude/settings.local.json

@@ -257,6 +257,22 @@ viewer.body.setState('left.hip', {value:60,status:'adjusting'}, {modelToken});
 
 `body.setState` 支持 shoulder/back/lumbar/hip/leg；物理气路沿用 air.moveTo、adjustment.begin/end 等接口。T12 原 left.lumbar 等部位 ID 应迁移到 body.setState；setAirState 的 T12 ID 现在表示物理气路。加热和按摩 ID 不变。正在执行的物理动作保留原气路；重新归并影响后续部位调用。页面切换腰部选择会停止本侧预览，下一轮按肩→背→腰→臀→腿依次演示。JSON 分发支持以上两个新方法。
 
+### T12 圆囊调节光效（2026-10-15）
+
+揭开外罩后，T12 每一路圆囊按状态显示，未调节的圆囊保持暗色休眠，只留顶面细描边：
+
+| 外观 | 条件 | 表现 |
+| --- | --- | --- |
+| 充气 | `status: 'inflating'`，或 `air.moveTo` 目标高于当前，或上报数值持续上升 | 青色；柱壁光带自下而上，光点上升，顶面波纹外扩 |
+| 放气 | `status: 'deflating'`，或 `air.moveTo` 目标低于当前，或上报数值持续下降 | 琥珀色；光带自上而下，光点下落 |
+| 保压 | `adjusting` 且没有方向（数值停止变化 0.8 秒后） | 浅青色缓慢呼吸 |
+| 故障 | `status: 'fault'`，且该侧正在展示 | 静态红色，不显示流向 |
+| 休眠 | 其余情况 | 深色圆囊，顶面一圈冷灰描边 |
+
+调节中的每排还有：顶面压力刻度环（按当前展示值点亮，目标值处有亮点）、整排底部的括号形光垫，以及从床尾控制仓沿气路流向该排的流光。同一排7个囊从靠近床中线的一端依次点亮。用 `air.moveTo` 预览时，目标高度会出现一圈虚线环：向上调时悬在顶面上方，向下调时套在柱壁外侧。扫描进入/退出时，扫描线经过的排会闪亮一次，底板细网格随扫描线扫亮。
+
+App 端建议：设备能区分充气和放气时，直接上报 `inflating` / `deflating`，方向最准确；只能上报 `adjusting` 时，模型会根据数值变化推断方向。光效不新增接口，也不改变状态语义。暂停、离线、减少动态效果时只显示静态高亮；淡入淡出结束后停止绘制。光效不进入 GLB。
+
 ## 手机性能接口（2026-09-21）
 
 构造支持 `performanceMode: 'auto' | 'native' | 'eco' | 'balanced' | 'high'`（默认auto，所有设备native，保留原画质及屏幕刷新节奏）。运行时 `setPerformanceMode(mode)` 切换；`setVisible(false/true)` 与 App 页面生命周期对接；`getPerformanceStats()` 获取计数和档位。三者支持页面 JSON 分发。详细档位、后台停绘语义和验证限制见 [PERFORMANCE.md](PERFORMANCE.md)。

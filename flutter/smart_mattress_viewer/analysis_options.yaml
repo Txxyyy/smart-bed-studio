@@ -1,0 +1,20 @@
+# 不引入 flutter_lints 依赖（避免改写 pubspec.lock 镜像地址），直接启用常用核心规则。
+analyzer:
+  exclude:
+    - build/**
+    - example/build/**
+  language:
+    strict-casts: true
+    strict-raw-types: true
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_print
+    - avoid_relative_lib_imports
+    - avoid_types_as_parameter_names
+    - cancel_subscriptions
+    - close_sinks
+    - prefer_const_constructors
+    - prefer_final_fields
+    - unawaited_futures
+    - use_build_context_synchronously

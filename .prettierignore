@@ -1,0 +1,14 @@
+# 生成文件与历史资料
+dist/
+work/
+exports/
+references/
+flutter/
+package-lock.json
+# 人工维护的中文文档与表格，不做自动排版
+*.md
+# 内嵌大数据
+src/assets/
+# 入口 HTML 的内联引导脚本会原样进入离线包
+*.html
+*.code-workspace

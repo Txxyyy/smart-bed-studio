@@ -3,12 +3,17 @@ import { createMattressViewer } from './mattress-sdk.js';
 import './model-app.css';
 import './massage-controls.css';
 
-const query=new URLSearchParams(location.search),embedded=query.has('embed'),$=s=>document.querySelector(s);
-const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-const HUMAN_SIDE={0:'右侧',1:'左侧'};
-let viewer,info,preview,poseUiFrame=0;
+const query = new URLSearchParams(location.search),
+  embedded = query.has('embed'),
+  $ = (s) => document.querySelector(s);
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const HUMAN_SIDE = { 0: '右侧', 1: '左侧' };
+let viewer,
+  info,
+  preview,
+  poseUiFrame = 0;
 
-document.querySelector('#app').innerHTML=`<div class="model-shell ${embedded?'embedded':''}">
+document.querySelector('#app').innerHTML = `<div class="model-shell ${embedded ? 'embedded' : ''}">
   <header><a href="?">N O C T I S <small>SMART SLEEP LAB</small></a><span>智能床垫 · 设备状态可视化</span><a href="?studio=1">设计工作台 ↗</a></header>
   <main><section class="model-stage"><div id="model-viewport"></div><div class="model-heading"><span>ADAPTIVE COMFORT</span><h1>支撑与温暖，融于一体。</h1><p id="model-identity">正在准备模型</p></div><div class="model-status"><i></i><span id="connection-state">等待设备状态</span></div><div class="model-camera"><button data-camera="perspective">整体</button><button data-camera="leftFoot">左侧床尾 70°</button><button data-camera="rightFoot">右侧床尾 70°</button><button data-camera="top">俯视</button><button id="follow-camera">自动跟随</button></div><div class="model-caption"><span>头部 ← · 仰躺人体左右 · → 足部</span><span id="phase-label">完整外观</span></div></section>
   <aside><span class="eyebrow">PRODUCT PROFILE</span><h2>选择床垫型号</h2><p>按仰躺人体左右显示。页面预览只驱动模型效果，不连接设备控制。</p><div class="model-picker"><button data-model="T11+">T11+<small>单侧7囊 · 肩腰臀3路</small></button><button data-model="generic">通用床垫<small>通用外观 · 标准状态格式</small></button><button data-model="T12">T12<small>海军蓝绗缝 · 深棕黑柔光皮革</small></button></div><div id="model-notice" role="status"></div>
@@ -18,54 +23,405 @@ document.querySelector('#app').innerHTML=`<div class="model-shell ${embedded?'em
   <section class="control-card"><div class="control-title">电动床姿态 <small>ADJUSTABLE BASE</small></div><div class="mode-grid"><button data-pose="flat">平躺</button><button data-pose="read">阅读</button><button data-pose="zero">零重力</button><button data-pose="relax">舒展</button></div><label class="range-line">背部 <output id="back-output">0°</output><input id="back-angle" type="range" min="0" max="65" value="0"></label><label class="range-line">腿部 <output id="leg-output">0°</output><input id="leg-angle" type="range" min="0" max="35" value="0"></label><div class="rate-row"><label>背部速度 <input id="back-rate" type="number" min="0.5" max="30" step="0.5" value="3"> °/秒</label><label>腿部速度 <input id="leg-rate" type="number" min="0.5" max="30" step="0.5" value="3"> °/秒</label></div><div class="speed-row"><span>运动速度</span><div><button data-speed="slow">慢</button><button data-speed="standard" class="selected">标准</button><button data-speed="fast">快</button></div></div></section>
   <section class="control-card compact"><div class="control-title">当前设备状态 <small>LIVE STATE</small></div><div id="device-regions"></div><p class="waiting-note">“—”表示尚未收到对应状态。</p><div class="model-views"><button data-view="solid">完整外观</button><button data-view="xray">内部结构</button><button data-view="explode">三层结构</button></div></section><button id="reset-demo" class="reset-button">重置演示与视角</button></aside></main><footer>NOCTIS / 智能睡眠系统<span>MODEL SDK · V.19</span></footer></div>`;
 
-function notice(message){$('#model-notice').textContent=message;}
-const massageLabels={running:'运行中',paused:'已暂停',off:'已停止',fault:'故障'};
-function renderState(){if(!viewer?.getState)return;const {observed,rendered}=viewer.getState();$('#connection-state').textContent=!observed.initialized?'等待设备状态':observed.online?'设备状态已同步':'设备数据已过期';$('#back-output').textContent=`${Math.round(rendered.back)}°`;$('#leg-output').textContent=`${Math.round(rendered.leg)}°`;for(const row of document.querySelectorAll('[data-region]')){const record=observed[row.dataset.kind][row.dataset.region],value=row.dataset.kind==='massage'?massageLabels[record.status]:record[row.dataset.kind==='air'?'value':'level'];row.querySelector('strong').textContent=value??'—';row.dataset.active=String(['inflating','deflating','adjusting','heating','running'].includes(record.status));}renderMassageControls(observed);}
-function syncPoseProgress(){poseUiFrame=0;if(!viewer?.getState)return;const state=viewer.getState();$('#back-output').textContent=`${Math.round(state.rendered.back)}°`;$('#leg-output').textContent=`${Math.round(state.rendered.leg)}°`;if(state.motion.pose.length)poseUiFrame=requestAnimationFrame(syncPoseProgress);}
-function schedulePoseProgress(){if(!poseUiFrame)poseUiFrame=requestAnimationFrame(syncPoseProgress);}
-function renderProgress(){const lines=[...preview.running.entries()].map(([side,state])=>`${side==='left'?'人体左侧':'人体右侧'} · ${state.label} · ${state.index}/${state.total}`);$('#run-progress').textContent=lines.length?lines.join('　｜　'):'尚未开始预览';document.querySelectorAll('[data-run-side]').forEach(button=>button.classList.toggle('running',preview.running.has(button.dataset.runSide)));}
-function makeHeatControls(){const host=$('#heating-controls');host.replaceChildren();for(const region of info.heating){const line=document.createElement('div');line.className='heat-line';const title=document.createElement('span');title.textContent=`${HUMAN_SIDE[region.side]} · ${region.name}`;line.append(title);for(let level=0;level<=3;level++){const button=document.createElement('button');button.textContent=level===0?'关':`${level}档`;button.dataset.heat=region.id;button.dataset.level=level;button.addEventListener('click',()=>setHeat(region.id,level));line.append(button);}host.append(line);}}
-function makeMassageControls(){
-  const host=$('#massage-controls');host.replaceChildren();$('#massage-card').hidden=!info.massage.length;
-  for(const channel of [...info.massage].sort((a,b)=>b.side-a.side)){
-    const card=document.createElement('div');card.className='massage-side';card.dataset.massageSide=channel.id;
-    card.innerHTML=`<div class="massage-line"><span>${channel.name}<small data-massage-status>等待状态</small></span><button data-massage-toggle aria-label="${channel.name}按摩开始">开始</button><button data-massage-stop aria-label="${channel.name}按摩停止">停止</button></div><div class="massage-settings"><label>强度 <input data-massage-intensity type="range" min="0" max="1" step="0.05" value="${channel.defaultIntensity}" aria-label="${channel.name}按摩强度"></label><label>单轮 <input data-massage-cycle type="number" min="4" max="30" step="1" value="${channel.defaultCycleSeconds}" aria-label="${channel.name}按摩周期"> 秒</label></div>`;
-    const apply=state=>{try{viewer.massage.setState(channel.id,state);}catch(error){notice(error.message);renderState();}};
-    card.querySelector('[data-massage-toggle]').onclick=()=>{const current=viewer.getState().observed.massage[channel.id];apply({status:current.status==='running'?'paused':'running',intensity:Number(card.querySelector('[data-massage-intensity]').value),cycleSeconds:Number(card.querySelector('[data-massage-cycle]').value)});};
-    card.querySelector('[data-massage-stop]').onclick=()=>apply({status:'off'});
-    card.querySelector('[data-massage-intensity]').oninput=e=>apply({intensity:Number(e.target.value)});
-    card.querySelector('[data-massage-cycle]').onchange=e=>apply({cycleSeconds:Number(e.target.value)});
+function notice(message) {
+  $('#model-notice').textContent = message;
+}
+const massageLabels = { running: '运行中', paused: '已暂停', off: '已停止', fault: '故障' };
+function renderState() {
+  if (!viewer?.getState) return;
+  const { observed, rendered } = viewer.getState();
+  $('#connection-state').textContent = !observed.initialized
+    ? '等待设备状态'
+    : observed.online
+      ? '设备状态已同步'
+      : '设备数据已过期';
+  $('#back-output').textContent = `${Math.round(rendered.back)}°`;
+  $('#leg-output').textContent = `${Math.round(rendered.leg)}°`;
+  for (const row of document.querySelectorAll('[data-region]')) {
+    const record = observed[row.dataset.kind][row.dataset.region],
+      value =
+        row.dataset.kind === 'massage'
+          ? massageLabels[record.status]
+          : record[row.dataset.kind === 'air' ? 'value' : 'level'];
+    row.querySelector('strong').textContent = value ?? '—';
+    row.dataset.active = String(
+      ['inflating', 'deflating', 'adjusting', 'heating', 'running'].includes(record.status),
+    );
+  }
+  renderMassageControls(observed);
+}
+function syncPoseProgress() {
+  poseUiFrame = 0;
+  if (!viewer?.getState) return;
+  const state = viewer.getState();
+  $('#back-output').textContent = `${Math.round(state.rendered.back)}°`;
+  $('#leg-output').textContent = `${Math.round(state.rendered.leg)}°`;
+  if (state.motion.pose.length) poseUiFrame = requestAnimationFrame(syncPoseProgress);
+}
+function schedulePoseProgress() {
+  if (!poseUiFrame) poseUiFrame = requestAnimationFrame(syncPoseProgress);
+}
+function renderProgress() {
+  const lines = [...preview.running.entries()].map(
+    ([side, state]) =>
+      `${side === 'left' ? '人体左侧' : '人体右侧'} · ${state.label} · ${state.index}/${state.total}`,
+  );
+  $('#run-progress').textContent = lines.length ? lines.join('　｜　') : '尚未开始预览';
+  document
+    .querySelectorAll('[data-run-side]')
+    .forEach((button) =>
+      button.classList.toggle('running', preview.running.has(button.dataset.runSide)),
+    );
+}
+function makeHeatControls() {
+  const host = $('#heating-controls');
+  host.replaceChildren();
+  for (const region of info.heating) {
+    const line = document.createElement('div');
+    line.className = 'heat-line';
+    const title = document.createElement('span');
+    title.textContent = `${HUMAN_SIDE[region.side]} · ${region.name}`;
+    line.append(title);
+    for (let level = 0; level <= 3; level++) {
+      const button = document.createElement('button');
+      button.textContent = level === 0 ? '关' : `${level}档`;
+      button.dataset.heat = region.id;
+      button.dataset.level = level;
+      button.addEventListener('click', () => setHeat(region.id, level));
+      line.append(button);
+    }
+    host.append(line);
+  }
+}
+function makeMassageControls() {
+  const host = $('#massage-controls');
+  host.replaceChildren();
+  $('#massage-card').hidden = !info.massage.length;
+  for (const channel of [...info.massage].sort((a, b) => b.side - a.side)) {
+    const card = document.createElement('div');
+    card.className = 'massage-side';
+    card.dataset.massageSide = channel.id;
+    card.innerHTML = `<div class="massage-line"><span>${channel.name}<small data-massage-status>等待状态</small></span><button data-massage-toggle aria-label="${channel.name}按摩开始">开始</button><button data-massage-stop aria-label="${channel.name}按摩停止">停止</button></div><div class="massage-settings"><label>强度 <input data-massage-intensity type="range" min="0" max="1" step="0.05" value="${channel.defaultIntensity}" aria-label="${channel.name}按摩强度"></label><label>单轮 <input data-massage-cycle type="number" min="4" max="30" step="1" value="${channel.defaultCycleSeconds}" aria-label="${channel.name}按摩周期"> 秒</label></div>`;
+    const apply = (state) => {
+      try {
+        viewer.massage.setState(channel.id, state);
+      } catch (error) {
+        notice(error.message);
+        renderState();
+      }
+    };
+    card.querySelector('[data-massage-toggle]').onclick = () => {
+      const current = viewer.getState().observed.massage[channel.id];
+      apply({
+        status: current.status === 'running' ? 'paused' : 'running',
+        intensity: Number(card.querySelector('[data-massage-intensity]').value),
+        cycleSeconds: Number(card.querySelector('[data-massage-cycle]').value),
+      });
+    };
+    card.querySelector('[data-massage-stop]').onclick = () => apply({ status: 'off' });
+    card.querySelector('[data-massage-intensity]').oninput = (e) =>
+      apply({ intensity: Number(e.target.value) });
+    card.querySelector('[data-massage-cycle]').onchange = (e) =>
+      apply({ cycleSeconds: Number(e.target.value) });
     host.append(card);
   }
 }
-function renderMassageControls(observed){
-  for(const card of document.querySelectorAll('[data-massage-side]')){
-    const record=observed.massage[card.dataset.massageSide],channel=info.massage.find(c=>c.id===card.dataset.massageSide),running=record.status==='running';
-    card.dataset.running=String(running);card.querySelector('[data-massage-status]').textContent=massageLabels[record.status]??'等待状态';
-    const toggle=card.querySelector('[data-massage-toggle]');toggle.textContent=running?'暂停':record.status==='paused'?'继续':'开始';toggle.setAttribute('aria-label',`${channel.name}按摩${toggle.textContent}`);toggle.classList.toggle('selected',running);
-    card.querySelector('[data-massage-stop]').disabled=!['running','paused'].includes(record.status);
-    card.querySelector('[data-massage-intensity]').value=record.intensity??channel.defaultIntensity;card.querySelector('[data-massage-cycle]').value=record.cycleSeconds??channel.defaultCycleSeconds;
+function renderMassageControls(observed) {
+  for (const card of document.querySelectorAll('[data-massage-side]')) {
+    const record = observed.massage[card.dataset.massageSide],
+      channel = info.massage.find((c) => c.id === card.dataset.massageSide),
+      running = record.status === 'running';
+    card.dataset.running = String(running);
+    card.querySelector('[data-massage-status]').textContent =
+      massageLabels[record.status] ?? '等待状态';
+    const toggle = card.querySelector('[data-massage-toggle]');
+    toggle.textContent = running ? '暂停' : record.status === 'paused' ? '继续' : '开始';
+    toggle.setAttribute('aria-label', `${channel.name}按摩${toggle.textContent}`);
+    toggle.classList.toggle('selected', running);
+    card.querySelector('[data-massage-stop]').disabled = !['running', 'paused'].includes(
+      record.status,
+    );
+    card.querySelector('[data-massage-intensity]').value =
+      record.intensity ?? channel.defaultIntensity;
+    card.querySelector('[data-massage-cycle]').value =
+      record.cycleSeconds ?? channel.defaultCycleSeconds;
   }
 }
-function modelReady(next){info=next;$('#model-identity').textContent=`${info.name} · ${info.airbagCount} 个${info.massage.length?'支撑气囊 · 双侧按摩':'气囊'}`;notice(info.configurationNote||(info.status==='reference'?'当前外观为已制作的产品参考配置。':'通用配置已加载。'));document.querySelectorAll('[data-model]').forEach(button=>button.classList.toggle('selected',(button.dataset.model==='T11+'?'t11-plus':button.dataset.model.toLowerCase())===info.id));const host=$('#device-regions');host.replaceChildren();for(const [kind,regions] of [['air',info.regions],['heating',info.heating],['massage',info.massage]])for(const region of regions){const row=document.createElement('div');row.className='device-region';row.dataset.kind=kind;row.dataset.region=region.id;row.innerHTML=`<span>${HUMAN_SIDE[region.side]} · ${kind==='massage'?'按摩':region.name}${kind==='heating'?'加热':''}</span><strong>—</strong>`;host.append(row);}makeHeatControls();makeMassageControls();
-let tidal=$('#tidal-controls');if(!tidal){tidal=document.createElement('div');tidal.id='tidal-controls';$('#model-notice').after(tidal);}tidal.replaceChildren();
-if(info.waistCircuits)for(const side of ['left','right']){const label=document.createElement('label');label.textContent=`${side==='left'?'人体左侧':'人体右侧'}腰部气路 `;const select=document.createElement('select');select.setAttribute('aria-label',label.textContent);for(const n of [3,4,5])select.add(new Option(`气路${n}`,String(n)));select.value=String(info.waistCircuits[side]);select.onchange=()=>{preview.stop(side);viewer.tidal.setWaistCircuit(side,Number(select.value));};label.append(select);const mapping=document.createElement('small');mapping.textContent=info.adjustmentGroups.filter(g=>g.side===(side==='left'?1:0)).map(g=>`${g.name}：${g.circuitIds.map(id=>id.match(/\d+$/)[0]).join('+')}`).join(' · ');label.append(mapping);tidal.append(label);}
-renderState();}
-function setHeat(id,level){viewer.heating.setState(id,level?{level,status:'heating'}:{level:0,status:'off'});document.querySelectorAll(`[data-heat="${id}"]`).forEach(button=>button.classList.toggle('selected',Number(button.dataset.level)===level));notice(`${id} 已切换为 ${level?`${level} 档加热`:'关闭'}。`);}
-const presets={flat:[0,0],read:[52,10],zero:[28,24],relax:[14,32]},speedPresets={slow:{back:1.5,leg:1.5},standard:{back:3,leg:3},fast:{back:4.5,leg:4.5}};
-function poseRates(){return {back:Number($('#back-rate').value),leg:Number($('#leg-rate').value)};}
-function setPose(back,leg){const rate=poseRates();viewer.pose.moveTo({back:{angle:back,degreesPerSecond:rate.back},leg:{angle:leg,degreesPerSecond:rate.leg}});$('#back-angle').value=back;$('#leg-angle').value=leg;renderState();}
-
-class PreviewController{
-  constructor(model){this.model=model;this.running=new Map();this.version=0;}
-  stop(side){const state=this.running.get(side);if(state){state.cancelled=true;this.running.delete(side);}for(const region of info.regions.filter(region=>(region.side===1?'left':'right')===side))this.model.air.stop(region.id);if(side)this.model.effects.setSideReveal(side,{phase:'closed'});renderProgress();}
-  async move(region,target,token,state){const results=(region.circuitIds||[region.id]).map(id=>this.model.air.moveTo(id,{target,ratePerSecond:12})),result={durationMs:Math.max(...results.map(r=>r.durationMs))};await wait(Math.max(240,result.durationMs+140));return !state.cancelled&&token===this.version;}
-  async run(side){if(this.running.has(side))return;const token=this.version,regions=(this.model.getModelInfo().adjustmentGroups||info.regions).filter(region=>(region.side===1?'left':'right')===side),state={cancelled:false,index:0,total:regions.length,label:'转向中'};this.running.set(side,state);renderProgress();this.model.animation.setPolicy('app');this.model.camera.focusSide(side,{duration:1800});await wait(900);if(state.cancelled||token!==this.version)return;state.label='扫描进入';renderProgress();this.model.effects.scanIn(side,{duration:850});await wait(900);for(const region of regions){if(state.cancelled||token!==this.version)break;state.index++;state.label=region.name;renderProgress();const current=this.model.getState().observed.air[(region.circuitIds||[region.id])[0]].value??50;if(state.cancelled||token!==this.version)break;this.model.adjustment.begin(region.circuitIds||[region.id]);if(!await this.move(region,Math.min(region.range[1],current+28),token,state))break;if(!await this.move(region,Math.max(region.range[0],current-18),token,state))break;if(!await this.move(region,current,token,state))break;this.model.adjustment.end(region.circuitIds||[region.id]);}if(!state.cancelled&&token===this.version){state.label='扫描恢复';renderProgress();this.model.effects.scanOut(side,{duration:850});await wait(900);}this.running.delete(side);this.model.effects.setSideReveal(side,{phase:'closed'});renderProgress();}
-  reset(){this.version++;for(const side of [...this.running.keys()])this.stop(side);this.model.animation.cancel();this.model.animation.resume();this.model.effects.setSideReveal('left',{phase:'closed'});this.model.effects.setSideReveal('right',{phase:'closed'});for(const region of info.regions){this.model.air.stop(region.id);this.model.setAirState(region.id,{value:50,status:'idle'});}for(const region of info.heating)this.model.heating.setState(region.id,{level:0,status:'off'});for(const channel of info.massage)this.model.massage.setState(channel.id,{status:'off',intensity:channel.defaultIntensity,cycleSeconds:channel.defaultCycleSeconds});this.model.pose.stop();this.model.setPose({back:0,leg:0});$('#back-angle').value=0;$('#leg-angle').value=0;$('#back-rate').value='3';$('#leg-rate').value='3';document.querySelectorAll('[data-speed]').forEach(button=>button.classList.toggle('selected',button.dataset.speed==='standard'));this.model.camera.reset();renderState();renderProgress();notice('已恢复默认展示状态与整体视角。');}
+function modelReady(next) {
+  info = next;
+  $('#model-identity').textContent =
+    `${info.name} · ${info.airbagCount} 个${info.massage.length ? '支撑气囊 · 双侧按摩' : '气囊'}`;
+  notice(
+    info.configurationNote ||
+      (info.status === 'reference' ? '当前外观为已制作的产品参考配置。' : '通用配置已加载。'),
+  );
+  document
+    .querySelectorAll('[data-model]')
+    .forEach((button) =>
+      button.classList.toggle(
+        'selected',
+        (button.dataset.model === 'T11+' ? 't11-plus' : button.dataset.model.toLowerCase()) ===
+          info.id,
+      ),
+    );
+  const host = $('#device-regions');
+  host.replaceChildren();
+  for (const [kind, regions] of [
+    ['air', info.regions],
+    ['heating', info.heating],
+    ['massage', info.massage],
+  ])
+    for (const region of regions) {
+      const row = document.createElement('div');
+      row.className = 'device-region';
+      row.dataset.kind = kind;
+      row.dataset.region = region.id;
+      row.innerHTML = `<span>${HUMAN_SIDE[region.side]} · ${kind === 'massage' ? '按摩' : region.name}${kind === 'heating' ? '加热' : ''}</span><strong>—</strong>`;
+      host.append(row);
+    }
+  makeHeatControls();
+  makeMassageControls();
+  let tidal = $('#tidal-controls');
+  if (!tidal) {
+    tidal = document.createElement('div');
+    tidal.id = 'tidal-controls';
+    $('#model-notice').after(tidal);
+  }
+  tidal.replaceChildren();
+  if (info.waistCircuits)
+    for (const side of ['left', 'right']) {
+      const label = document.createElement('label');
+      label.textContent = `${side === 'left' ? '人体左侧' : '人体右侧'}腰部气路 `;
+      const select = document.createElement('select');
+      select.setAttribute('aria-label', label.textContent);
+      for (const n of [3, 4, 5]) select.add(new Option(`气路${n}`, String(n)));
+      select.value = String(info.waistCircuits[side]);
+      select.onchange = () => {
+        preview.stop(side);
+        viewer.tidal.setWaistCircuit(side, Number(select.value));
+      };
+      label.append(select);
+      const mapping = document.createElement('small');
+      mapping.textContent = info.adjustmentGroups
+        .filter((g) => g.side === (side === 'left' ? 1 : 0))
+        .map((g) => `${g.name}：${g.circuitIds.map((id) => id.match(/\d+$/)[0]).join('+')}`)
+        .join(' · ');
+      label.append(mapping);
+      tidal.append(label);
+    }
+  renderState();
+}
+function setHeat(id, level) {
+  viewer.heating.setState(id, level ? { level, status: 'heating' } : { level: 0, status: 'off' });
+  document
+    .querySelectorAll(`[data-heat="${id}"]`)
+    .forEach((button) =>
+      button.classList.toggle('selected', Number(button.dataset.level) === level),
+    );
+  notice(`${id} 已切换为 ${level ? `${level} 档加热` : '关闭'}。`);
+}
+const presets = { flat: [0, 0], read: [52, 10], zero: [28, 24], relax: [14, 32] },
+  speedPresets = {
+    slow: { back: 1.5, leg: 1.5 },
+    standard: { back: 3, leg: 3 },
+    fast: { back: 4.5, leg: 4.5 },
+  };
+function poseRates() {
+  return { back: Number($('#back-rate').value), leg: Number($('#leg-rate').value) };
+}
+function setPose(back, leg) {
+  const rate = poseRates();
+  viewer.pose.moveTo({
+    back: { angle: back, degreesPerSecond: rate.back },
+    leg: { angle: leg, degreesPerSecond: rate.leg },
+  });
+  $('#back-angle').value = back;
+  $('#leg-angle').value = leg;
+  renderState();
 }
 
-try{viewer=createMattressViewer($('#model-viewport'));window.mattress=viewer;preview=new PreviewController(viewer);window.mattressPreview=preview;viewer.on('model.ready',modelReady);viewer.on('model.mappingChanged',()=>modelReady(viewer.getModelInfo()));viewer.on('state.applied',renderState);viewer.on('animation.started',event=>{if(event.kind==='pose-motion')schedulePoseProgress();});viewer.on('viewer.error',event=>notice(event.message));viewer.on('animation.phase',event=>{$('#phase-label').textContent=({closed:'完整外观',camera:'转向调节侧',scan:'扫描进入',adjust:'设备正在调节',closing:'扫描恢复外观'})[event.phase]||'叠加调节中';});document.querySelectorAll('[data-model]').forEach(button=>button.addEventListener('click',()=>{preview.reset();viewer.setModel(button.dataset.model).catch(error=>notice(error.message));}));document.querySelectorAll('[data-camera]').forEach(button=>button.addEventListener('click',()=>viewer.camera.setPreset(button.dataset.camera)));document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>viewer.view.setMode(button.dataset.view)));document.querySelectorAll('[data-run-side]').forEach(button=>button.addEventListener('click',()=>preview.run(button.dataset.runSide)));document.querySelectorAll('[data-pose]').forEach(button=>button.addEventListener('click',()=>setPose(...presets[button.dataset.pose])));for(const key of ['back','leg'])$(`#${key}-angle`).addEventListener('input',()=>setPose(Number($('#back-angle').value),Number($('#leg-angle').value)));document.querySelectorAll('[data-speed]').forEach(button=>button.addEventListener('click',()=>{const preset=speedPresets[button.dataset.speed];$('#back-rate').value=preset.back;$('#leg-rate').value=preset.leg;document.querySelectorAll('[data-speed]').forEach(item=>item.classList.toggle('selected',item===button));notice(`床体目标速度已设为背部 ${preset.back}°/秒、腿部 ${preset.leg}°/秒。`);}));$('#follow-camera').addEventListener('click',()=>{viewer.camera.setFollow(true);notice('镜头将随后启动的调节侧转向对应床尾 70° 方位、30° 俯看视角。');});$('#reset-demo').addEventListener('click',()=>preview.reset());await viewer.setModel(query.get('model')||'T11+');}catch(error){notice(error.message);$('#connection-state').textContent='模型尚未就绪';}
+class PreviewController {
+  constructor(model) {
+    this.model = model;
+    this.running = new Map();
+    this.version = 0;
+  }
+  stop(side) {
+    const state = this.running.get(side);
+    if (state) {
+      state.cancelled = true;
+      this.running.delete(side);
+    }
+    for (const region of info.regions.filter(
+      (region) => (region.side === 1 ? 'left' : 'right') === side,
+    ))
+      this.model.air.stop(region.id);
+    if (side) this.model.effects.setSideReveal(side, { phase: 'closed' });
+    renderProgress();
+  }
+  async move(region, target, token, state) {
+    const results = (region.circuitIds || [region.id]).map((id) =>
+        this.model.air.moveTo(id, { target, ratePerSecond: 12 }),
+      ),
+      result = { durationMs: Math.max(...results.map((r) => r.durationMs)) };
+    await wait(Math.max(240, result.durationMs + 140));
+    return !state.cancelled && token === this.version;
+  }
+  async run(side) {
+    if (this.running.has(side)) return;
+    const token = this.version,
+      regions = (this.model.getModelInfo().adjustmentGroups || info.regions).filter(
+        (region) => (region.side === 1 ? 'left' : 'right') === side,
+      ),
+      state = { cancelled: false, index: 0, total: regions.length, label: '转向中' };
+    this.running.set(side, state);
+    renderProgress();
+    this.model.animation.setPolicy('app');
+    this.model.camera.focusSide(side, { duration: 1800 });
+    await wait(900);
+    if (state.cancelled || token !== this.version) return;
+    state.label = '扫描进入';
+    renderProgress();
+    this.model.effects.scanIn(side, { duration: 850 });
+    await wait(900);
+    for (const region of regions) {
+      if (state.cancelled || token !== this.version) break;
+      state.index++;
+      state.label = region.name;
+      renderProgress();
+      const current =
+        this.model.getState().observed.air[(region.circuitIds || [region.id])[0]].value ?? 50;
+      if (state.cancelled || token !== this.version) break;
+      this.model.adjustment.begin(region.circuitIds || [region.id]);
+      if (!(await this.move(region, Math.min(region.range[1], current + 28), token, state))) break;
+      if (!(await this.move(region, Math.max(region.range[0], current - 18), token, state))) break;
+      if (!(await this.move(region, current, token, state))) break;
+      this.model.adjustment.end(region.circuitIds || [region.id]);
+    }
+    if (!state.cancelled && token === this.version) {
+      state.label = '扫描恢复';
+      renderProgress();
+      this.model.effects.scanOut(side, { duration: 850 });
+      await wait(900);
+    }
+    this.running.delete(side);
+    this.model.effects.setSideReveal(side, { phase: 'closed' });
+    renderProgress();
+  }
+  reset() {
+    this.version++;
+    for (const side of [...this.running.keys()]) this.stop(side);
+    this.model.animation.cancel();
+    this.model.animation.resume();
+    this.model.effects.setSideReveal('left', { phase: 'closed' });
+    this.model.effects.setSideReveal('right', { phase: 'closed' });
+    for (const region of info.regions) {
+      this.model.air.stop(region.id);
+      this.model.setAirState(region.id, { value: 50, status: 'idle' });
+    }
+    for (const region of info.heating)
+      this.model.heating.setState(region.id, { level: 0, status: 'off' });
+    for (const channel of info.massage)
+      this.model.massage.setState(channel.id, {
+        status: 'off',
+        intensity: channel.defaultIntensity,
+        cycleSeconds: channel.defaultCycleSeconds,
+      });
+    this.model.pose.stop();
+    this.model.setPose({ back: 0, leg: 0 });
+    $('#back-angle').value = 0;
+    $('#leg-angle').value = 0;
+    $('#back-rate').value = '3';
+    $('#leg-rate').value = '3';
+    document
+      .querySelectorAll('[data-speed]')
+      .forEach((button) =>
+        button.classList.toggle('selected', button.dataset.speed === 'standard'),
+      );
+    this.model.camera.reset();
+    renderState();
+    renderProgress();
+    notice('已恢复默认展示状态与整体视角。');
+  }
+}
 
-window.mattressDispatch=request=>dispatchModel(viewer,request);
-if(viewer)viewer.on('*',event=>window.dispatchEvent(new CustomEvent('mattress:event',{detail:event})));
+try {
+  viewer = createMattressViewer($('#model-viewport'));
+  window.mattress = viewer;
+  preview = new PreviewController(viewer);
+  window.mattressPreview = preview;
+  viewer.on('model.ready', modelReady);
+  viewer.on('model.mappingChanged', () => modelReady(viewer.getModelInfo()));
+  viewer.on('state.applied', renderState);
+  viewer.on('animation.started', (event) => {
+    if (event.kind === 'pose-motion') schedulePoseProgress();
+  });
+  viewer.on('viewer.error', (event) => notice(event.message));
+  viewer.on('animation.phase', (event) => {
+    $('#phase-label').textContent =
+      {
+        closed: '完整外观',
+        camera: '转向调节侧',
+        scan: '扫描进入',
+        adjust: '设备正在调节',
+        closing: '扫描恢复外观',
+      }[event.phase] || '叠加调节中';
+  });
+  document.querySelectorAll('[data-model]').forEach((button) =>
+    button.addEventListener('click', () => {
+      preview.reset();
+      viewer.setModel(button.dataset.model).catch((error) => notice(error.message));
+    }),
+  );
+  document
+    .querySelectorAll('[data-camera]')
+    .forEach((button) =>
+      button.addEventListener('click', () => viewer.camera.setPreset(button.dataset.camera)),
+    );
+  document
+    .querySelectorAll('[data-view]')
+    .forEach((button) =>
+      button.addEventListener('click', () => viewer.view.setMode(button.dataset.view)),
+    );
+  document
+    .querySelectorAll('[data-run-side]')
+    .forEach((button) =>
+      button.addEventListener('click', () => preview.run(button.dataset.runSide)),
+    );
+  document
+    .querySelectorAll('[data-pose]')
+    .forEach((button) =>
+      button.addEventListener('click', () => setPose(...presets[button.dataset.pose])),
+    );
+  for (const key of ['back', 'leg'])
+    $(`#${key}-angle`).addEventListener('input', () =>
+      setPose(Number($('#back-angle').value), Number($('#leg-angle').value)),
+    );
+  document.querySelectorAll('[data-speed]').forEach((button) =>
+    button.addEventListener('click', () => {
+      const preset = speedPresets[button.dataset.speed];
+      $('#back-rate').value = preset.back;
+      $('#leg-rate').value = preset.leg;
+      document
+        .querySelectorAll('[data-speed]')
+        .forEach((item) => item.classList.toggle('selected', item === button));
+      notice(`床体目标速度已设为背部 ${preset.back}°/秒、腿部 ${preset.leg}°/秒。`);
+    }),
+  );
+  $('#follow-camera').addEventListener('click', () => {
+    viewer.camera.setFollow(true);
+    notice('镜头将随后启动的调节侧转向对应床尾 70° 方位、30° 俯看视角。');
+  });
+  $('#reset-demo').addEventListener('click', () => preview.reset());
+  await viewer.setModel(query.get('model') || 'T11+');
+} catch (error) {
+  notice(error.message);
+  $('#connection-state').textContent = '模型尚未就绪';
+}
+
+window.mattressDispatch = (request) => dispatchModel(viewer, request);
+if (viewer)
+  viewer.on('*', (event) =>
+    window.dispatchEvent(new CustomEvent('mattress:event', { detail: event })),
+  );
 window.dispatchEvent(new CustomEvent('mattress:ready'));
