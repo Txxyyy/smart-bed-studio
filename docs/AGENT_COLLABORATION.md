@@ -28,6 +28,16 @@ GitHub Actions（`.github/workflows/ci.yml`）在 `main`、`claude/**` 推送和
 
 `pubspec.lock` 中的 `url` 在本机为国内镜像 `pub.flutter-io.cn`；在其他网络执行 `flutter pub get` 若只改了 url，不要提交该变化。
 
+## 本机开发与 GitHub 备份
+
+日常开发在本机进行，GitHub（origin）作为备份与 CI 复核，不是开发环境：
+
+1. 一次性准备：`git clone` 后 `nvm use && npm ci`；`git config blame.ignoreRevsFile .git-blame-ignore-revs`。
+2. 每个任务从最新 `main` 开新分支（`git switch -c feat/<主题>`），小步提交，提交信息写清改了什么、验证了什么。
+3. 提交前 `npm run check`；改了 `src/` 再 `npm run build:flutter` 并一起提交。
+4. 合入 `main`：本机 `git merge --no-ff`（或经 PR），然后 `git push origin main`。验收过的交付版本打标签：`git tag -a v<版本> -m "<说明>"`，`git push origin --tags`。
+5. 不提交 `dist/`、`work/`、`node_modules/`；回退用 `git revert`，不对已推送的 `main` 做 `reset --hard` 或强推。
+
 ## 分支与同步
 
 1. 开始工作前先 `git fetch origin` 并基于最新 `main`（或指定分支）开始，避免在过期代码上修改。
