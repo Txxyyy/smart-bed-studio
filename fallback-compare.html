@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>T12 · 3D 与二维降级视觉对比</title>
+  <style>
+    :root{color-scheme:dark;--bg:#10191d;--panel:#14232c;--line:#31434a;--text:#e9eff1;--muted:#9eb2b9;--cyan:#75d9f1;--warm:#ffa36b;--violet:#c49be8}
+    *{box-sizing:border-box}
+    body{margin:0;background:#0b1419;color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    header{height:65px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #283b44;background:#101c22}
+    header strong{font-size:13px;letter-spacing:.2em}
+    header span{font-size:12px;color:var(--muted)}
+    main{min-height:calc(100vh - 65px);max-width:1800px;margin:auto;padding:18px;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px}
+    .stage{height:calc(100vh - 101px);min-height:540px;align-self:start;background:var(--bg);border:1px solid var(--line);border-radius:16px;position:relative;overflow:hidden;display:grid;place-items:center}
+    .stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+    .poster{position:absolute;height:100%;max-width:100%;aspect-ratio:6/7;overflow:hidden;display:none}
+    .poster img,.poster svg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+    .stage .mode-badge{position:absolute;top:16px;left:17px;background:#0a151bcf;border:1px solid #526873;border-radius:99px;padding:7px 12px;font-size:12px;z-index:3}
+    .stage .caption{position:absolute;bottom:15px;left:17px;background:#0a151bcf;border-radius:7px;padding:7px 10px;color:#bbd0d5;font-size:12px;z-index:3}
+    .stage-controls{position:absolute;right:14px;bottom:14px;z-index:4;display:flex;gap:4px;padding:4px;background:#091923eb;border:1px solid #305263;border-radius:12px}
+    .stage-controls button{font-size:13px;padding:7px 11px}
+    [hidden]{display:none!important}
+    aside{display:flex;flex-direction:column;gap:12px}
+    .card{border:1px solid var(--line);border-radius:13px;padding:17px;background:linear-gradient(150deg,#182b34,#101e25)}
+    .eyebrow{font-size:10px;letter-spacing:.2em;color:#88a3ae}
+    h1{font-size:20px;margin:7px 0 9px}
+    p{margin:0;color:#acbdc2;font-size:13px}
+    .selector{display:grid;grid-template-columns:1fr 1fr;gap:5px;background:#0b171d;border-radius:10px;padding:5px;margin-top:14px}
+    button{font:inherit;color:#d7e7eb;background:transparent;border:1px solid transparent;border-radius:8px;padding:9px;cursor:pointer}
+    button.selected{color:#a9f1ff;background:#263e47;border-color:#547681}
+    .actions{display:grid;gap:7px;margin-top:12px}
+    .actions button{text-align:left;background:#1b2f38;border-color:#2f4a54}
+    .actions button:hover{background:#25424e;border-color:#5b8fa0}
+    .actions small{display:block;color:#9ab0b7;font-size:11px;margin-top:2px}
+    .status{margin-top:12px;padding:10px;background:#0d1a20;border-radius:8px;color:#c6d9dd;font-size:12px;min-height:39px}
+    .note{font-size:11px;color:#8fa6ae;padding:7px 2px}
+    svg .support-soft{animation:breath 2.8s ease-in-out infinite}
+    svg .halo{fill:url(#air-glow);animation:breath 2.8s ease-in-out infinite}
+    svg .rim{fill:none;stroke:var(--cyan);stroke-opacity:.22;stroke-width:1.3}
+    svg .crescent{fill:none;stroke:var(--cyan);stroke-opacity:.8;stroke-width:1.9;stroke-linecap:round;filter:drop-shadow(0 0 4px #75d9f1);animation:breath 2.8s ease-in-out infinite}
+    svg .heat{fill:url(#heat-glow);animation:breath 3.2s ease-in-out infinite}
+    svg .massage-core{fill:url(#massage-glow)}
+    svg .massage-wave{fill:none;stroke:var(--violet);stroke-opacity:.58;stroke-width:2.2;transform-box:fill-box;transform-origin:center;animation:massage 8s ease-out infinite}
+    svg .massage-wave.second{animation-delay:-4s}
+    .dot-breath{animation:dot-breathe 3.6s ease-in-out infinite;opacity:.3}
+    @keyframes dot-breathe{0%,100%{opacity:.22}50%{opacity:.48}}
+    .scan-pulse{animation:scan-pulse 4.8s linear infinite}
+    @keyframes scan-pulse{from{transform:translateX(var(--from))}to{transform:translateX(var(--to))}}
+    @media(prefers-reduced-motion:reduce){.dot-breath{animation:none;opacity:.3}.scan-pulse{display:none}}
+
+    @keyframes breath{50%{opacity:.72}}
+    @keyframes massage{0%{opacity:.65;transform:scale(.3)}100%{opacity:0;transform:scale(1)}}
+    @media(max-width:900px){main{grid-template-columns:1fr;padding:10px}.stage{height:64vh;min-height:0}aside{display:grid;grid-template-columns:1fr 1fr}.note{grid-column:1/-1}}
+  </style>
+</head>
+<body>
+<header><strong>T12 · VISUAL REVIEW</strong><span>固定床尾视角 · 人体仰躺左右 · 演示数据</span></header>
+<main>
+  <section class="stage">
+    <iframe id="webgl" title="T12 WebGL 3D" data-src="/embed.html?embed=1&amp;model=T12"></iframe>
+    <div class="poster" id="poster">
+      <img id="base" src="/src/fallback-assets/t12/base.png" alt="T12 正中床尾视角">
+      <svg id="effects" viewBox="0 0 1200 1400" preserveAspectRatio="none" aria-label="二维光效">
+        <defs>
+          <linearGradient id="support-energy" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#168bff" stop-opacity=".6"/><stop offset=".5" stop-color="#168bff" stop-opacity=".4"/><stop offset="1" stop-color="#39b9ff" stop-opacity=".4"/></linearGradient>
+          <linearGradient id="scan-energy"><stop stop-color="#66d9ff" stop-opacity="0"/><stop offset=".5" stop-color="#66d9ff" stop-opacity=".4"/><stop offset="1" stop-color="#66d9ff" stop-opacity="0"/></linearGradient>
+          <radialGradient id="particle-glow"><stop stop-color="#75eaff" stop-opacity=".6"/><stop offset="1" stop-color="#75eaff" stop-opacity="0"/></radialGradient>
+          <radialGradient id="air-glow"><stop offset="0" stop-color="#75d9f1" stop-opacity=".32"/><stop offset=".38" stop-color="#75d9f1" stop-opacity=".13"/><stop offset="1" stop-color="#75d9f1" stop-opacity="0"/></radialGradient>
+          <radialGradient id="heat-glow"><stop offset="0" stop-color="#ffa36b" stop-opacity=".66"/><stop offset=".56" stop-color="#ffa36b" stop-opacity=".27"/><stop offset="1" stop-color="#ffa36b" stop-opacity="0"/></radialGradient>
+          <radialGradient id="massage-glow"><stop offset="0" stop-color="#c49be8" stop-opacity=".45"/><stop offset=".45" stop-color="#c49be8" stop-opacity=".17"/><stop offset="1" stop-color="#c49be8" stop-opacity="0"/></radialGradient>
+        </defs>
+        <g id="lights"></g>
+      </svg>
+    </div>
+    <div class="mode-badge" id="badge">二维降级 · 正中机位</div>
+    <div class="caption" id="caption">完整床垫 · 选择右侧的演示动作</div>
+    <div class="stage-controls" id="stage-controls" hidden><button data-direction="inflating" class="selected">充气 ↑</button><button data-direction="deflating">放气 ↓</button></div>
+  </section>
+  <aside>
+    <section class="card" id="detail-card"><span class="eyebrow">ADJUSTMENT DETAIL</span><h1 style="font-size:17px">二维调节区域 · 局部细节</h1><svg id="detail" style="width:100%;height:130px;background:#0b1b28;border-radius:10px" aria-label="调节区域放大"></svg><p>局部蓝光 · 柔和亮边 · 细密点阵扫描</p></section>
+    <section class="card">
+      <span class="eyebrow">RENDER MODE</span><h1>同一机位，对比两种展示</h1>
+      <p id="mode-description">二维画面由真实模型导出。调节时保持完整织物外观，以局部蓝色柔光、柔和亮边和点阵扫描突出调节部位。</p>
+      <div class="selector"><button id="mode2d" class="selected">二维降级</button><button id="mode3d">原始 3D</button></div>
+    </section>
+    <section class="card">
+      <span class="eyebrow">DEMO STATE</span><h1 style="font-size:17px">体验调节光效</h1>
+      <div class="selector"><button data-side="left" class="selected">人体左侧</button><button data-side="right">人体右侧</button></div>
+      <div class="selector"><button data-direction="inflating" class="selected">3D 充气 ↑</button><button data-direction="deflating">3D 放气 ↓</button></div>
+      <div class="actions">
+        <button data-action="support">软硬调节<small>蓝色柔光 · 点阵扫描</small></button>
+        <button data-action="heat">腰部加热<small>透过织物的暖色光晕</small></button>
+        <button data-action="massage">按摩<small>跟随按摩周期的柔和波纹</small></button>
+        <button data-action="clear">恢复待机<small>收起光效，展示完整外观</small></button>
+      </div>
+      <div class="status" id="status">正在加载同机位资源…</div>
+    </section>
+    <div class="note">网页二维层用于视觉评审；正式降级由 Flutter 原生绘制。固定姿态通过数值和侧视示意表达，电视性能及兼容性仍需实机验证。</div>
+  </aside>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const ns = 'http://www.w3.org/2000/svg';
+const frame = $('#webgl'), poster = $('#poster'), lights = $('#lights');
+let metadata, mode = '2d', side = 'left', action = 'clear', loaded = false, supportDirection = 'inflating';
+function svg(tag, attrs, className) {
+  const node = document.createElementNS(ns, tag);
+  Object.entries(attrs).forEach(([key,value]) => node.setAttribute(key, value));
+  if (className) node.setAttribute('class', className);
+  return node;
+}
+function roundedZone(points) {
+  const corners=points.map((p,i)=>{
+    const prev=points[(i+3)%4],next=points[(i+1)%4];
+    const approach=q=>{const d=Math.hypot(q[0]-p[0],q[1]-p[1]);const t=Math.min(9/d,.2);return [p[0]+(q[0]-p[0])*t,p[1]+(q[1]-p[1])*t]};
+    return [approach(prev),p,approach(next)];
+  });
+  return corners.map((c,i)=>(i?'L':'M')+c[0].join(',')+' Q'+c[1].join(',')+' '+c[2].join(',')).join(' ')+' Z';
+}
+function displayZone(r) {
+  const p=r.polygon.map(p=>[p[0]*1200,p[1]*1400]);
+  const cy=(p[0][1]+p[2][1])/2;
+  const h=Math.max(p[2][1]-p[0][1],66);
+  return p.map((v,i)=>[v[0],cy+(i<2?-h/2:h/2)]);
+}
+function contextZones() {
+  for(const sideName of ['left','right']) {
+    const definitions=[['肩部',[1]],['背部',[2,3]],['腰部',[4]],['臀部',[5,6]],['腿部',[7]]];
+    for(const [label,ids] of definitions) {
+      const regions=ids.map(id=>metadata.regions.find(r=>r.kind==='air'&&r.id===sideName+'.circuit'+id));
+      const first=regions[0].polygon,last=regions.at(-1).polygon;
+      let p=[first[0],first[1],last[2],last[3]].map(v=>[v[0]*1200,v[1]*1400]);
+      if(label==='腰部') p=displayZone(regions[0]);
+      const cx=(p[0][0]+p[2][0])/2,cy=(p[0][1]+p[2][1])/2;
+      p=p.map(v=>[cx+(v[0]-cx)*.94,cy+(v[1]-cy)*.8]);
+      lights.append(svg('path',{d:roundedZone(p),fill:'#22669a','fill-opacity':.14,stroke:'#67acde','stroke-opacity':.2,'stroke-width':1}));
+      const text=svg('text',{x:cx,y:cy+4,'text-anchor':'middle',fill:'#c4d8e7','fill-opacity':.62,'font-size':13});text.textContent=label;lights.append(text);
+    }
+  }
+}
+function selectedRegions(kind) {
+  return metadata.regions.filter(r => r.kind === kind && r.side === side &&
+    (kind !== 'air' || r.id === side + '.circuit4') &&
+    (kind !== 'heating' || r.id === side + '.lumbar'));
+}
+function paint() {
+  lights.replaceChildren();
+  if (!metadata) return;
+  contextZones();
+  if (action === 'clear') return;
+  const kind = {support:'air',heat:'heating',massage:'massage'}[action];
+  for (const r of selectedRegions(kind)) {
+    if (kind === 'air') {
+      const points = displayZone(r);
+      const shape=roundedZone(points);
+      for(const [strokeWidth,opacity] of [[30,.055],[18,.1],[8,.25],[2.2,.95]])
+        lights.append(svg('path',{d:shape,fill:'none',stroke:'#39b9ff','stroke-width':strokeWidth,'stroke-opacity':opacity,'stroke-linejoin':'round'}));
+      lights.append(svg('path',{d:shape,fill:'url(#support-energy)'}));
+      const xs=points.map(p=>p[0]), ys=points.map(p=>p[1]);
+      const left=Math.min(...xs), top=Math.min(...ys);
+      const width=Math.max(...xs)-left, height=Math.max(...ys)-top;
+      const clipId='support-clip-'+r.id.replaceAll('.','-');
+      const clip=svg('clipPath',{id:clipId});
+      clip.append(svg('path',{d:shape}));
+      lights.append(clip);
+      const particles=svg('g',{'clip-path':'url(#'+clipId+')'});
+      for(let i=0;i<140;i++) {
+        const column=i%28,row=Math.floor(i/28),radius=1.8;
+        const u=.04+.92*(column+(row%2)*.35)/28,v=.16+row*.17;
+        const x=left+width*u,y=top+height*v;
+        
+        const particle=svg('g',{},'dot-breath');
+        particle.append(svg('circle',{cx:x,cy:y,r:radius*2.6,fill:'url(#particle-glow)'}));
+        particle.append(svg('circle',{cx:x,cy:y,r:radius,fill:'#a6edff'}));
+        particle.setAttribute('style','transform-origin:'+x+'px '+y+'px;animation-delay:'+(-column*.035)+'s');
+        particles.append(particle);
+      }
+      const scan=svg('rect',{x:-width*.16,y:top,width:width*.32,height,fill:'url(#scan-energy)'},'scan-pulse');
+      scan.setAttribute('style','--from:'+(left-width*.18)+'px;--to:'+(left+width*1.18)+'px');
+      particles.append(scan);
+      lights.append(particles);
+    } else {
+      const xs = r.polygon.map(p=>p[0]*1200), ys = r.polygon.map(p=>p[1]*1400);
+      const cx = (Math.min(...xs)+Math.max(...xs))/2, cy = (Math.min(...ys)+Math.max(...ys))/2;
+      const rx = (Math.max(...xs)-Math.min(...xs))/2, ry = (Math.max(...ys)-Math.min(...ys))/2;
+      lights.append(svg('ellipse',{cx,cy,rx:rx*(kind==='heating'?1.18:1.04),ry:ry*(kind==='heating'?1.55:1.25)},kind==='heating'?'heat':'massage-core'));
+      if (kind === 'massage') {
+        lights.append(svg('ellipse',{cx,cy,rx,ry},'massage-wave'));
+        lights.append(svg('ellipse',{cx,cy,rx,ry},'massage-wave second'));
+      }
+    }
+  }
+}
+function updateDetail() {
+  if(!metadata)return;
+  const detail=$('#detail');
+  detail.innerHTML=$('#effects').innerHTML.replaceAll('id="','id="detail-').replaceAll('url(#','url(#detail-');
+  const r=metadata.regions.find(r=>r.id===side+'.circuit4'&&r.kind==='air');
+  const points=displayZone(r),x=Math.min(...points.map(p=>p[0])),y=Math.min(...points.map(p=>p[1]));
+  detail.setAttribute('viewBox',[x-25,y-25,Math.max(...points.map(p=>p[0]))-x+50,116].join(' '));
+}
+function setMode(next) {
+  mode = next;
+  if (loaded) frame.contentWindow.mattress.setVisible(next === '3d');
+  if (next === '3d' && !frame.src) frame.src = frame.dataset.src;
+  frame.style.display = frame.getAttribute('src') ? 'block' : 'none';
+  frame.style.opacity = next === '3d' && loaded ? '1' : '0';
+  frame.style.pointerEvents = next === '3d' && loaded ? 'auto' : 'none';
+  poster.style.display = next === '2d' || !loaded ? 'block' : 'none';
+  $('#mode2d').classList.toggle('selected',next==='2d');
+  $('#mode3d').classList.toggle('selected',next==='3d');
+  $('#badge').textContent = next === '2d' ? '二维降级 · 正中机位' : loaded ? 'WebGL 3D · 同机位' : 'WebGL 3D · 加载中';
+  $('#caption').textContent = next === '2d' ? '固定床尾视角 · 完整床面与区域柔光' : '3D · 可拖动查看';
+  $('#stage-controls').hidden = next !== '3d';
+  $('#detail-card').hidden = next === '3d';
+  $('#mode-description').textContent = next === '3d'
+    ? '光区逐排贴合当前气囊。气囊升降时，侧面细光纹同步向上或向下流动。切换充气 / 放气查看。'
+    : '二维画面由真实模型导出。调节时保持完整织物外观，以局部蓝色柔光、柔和亮边和点阵扫描突出调节部位。';
+}
+function apply3d() {
+  if (!loaded || !metadata) return;
+  try {
+    const w = frame.contentWindow.mattress;
+    w.animation.setPolicy('app');
+    for (const s of ['left','right']) {
+      w.effects.setSideReveal(s,{phase:'closed'});
+      w.setAirState(s+'.circuit4',{value:50,status:'idle'});
+      w.heating.setState(s+'.lumbar',{level:0,status:'off'});
+      w.massage.setState(s,{status:'off'});
+    }
+    w.effects.setHighlight([]);
+    if (action === 'support') {
+      w.effects.setSideReveal(side,{progress:1,phase:'adjust'});
+      w.effects.setHighlight([side+'.circuit4']);
+      w.setAirState(side+'.circuit4',{value:supportDirection==='inflating'?85:15,status:supportDirection});
+      w.air.moveTo(side+'.circuit4',{target:supportDirection==='inflating'?85:15,ratePerSecond:14});
+    } else if (action === 'heat') {
+      w.heating.setState(side+'.lumbar',{level:3,status:'heating'});
+    } else if (action === 'massage') {
+      w.massage.setState(side,{status:'running',intensity:.8,cycleSeconds:8});
+    }
+  } catch (e) { $('#status').textContent = '3D 状态未能同步：'+e.message; }
+}
+function setAction(next) {
+  action = next; paint(); updateDetail(); apply3d();
+  const names = {support:'软硬调节',heat:'腰部加热',massage:'按摩',clear:'待机'};
+  $('#status').textContent = '人体'+(side==='left'?'左':'右')+'侧 · '+names[next]+' · 演示状态';
+}
+async function wait3d() {
+  const until = Date.now()+30000;
+  while (Date.now()<until) {
+    try {
+      const w = frame.contentWindow?.mattress;
+      if (w?.getModelInfo?.().id === 't12' && metadata) {
+        w.camera.setPose({position:metadata.camera.position,target:metadata.camera.target,duration:0});
+        w.grid.visible = false;
+        w.frame(performance.now());
+        loaded = true; apply3d(); setMode(mode);
+        $('#status').textContent = action==='support'?'3D · '+(supportDirection==='inflating'?'充气上升 ↑':'放气下降 ↓')+' · 演示状态':'3D 已加载，可在同一机位比较。';
+        return;
+      }
+    } catch {}
+    await new Promise(r=>setTimeout(r,180));
+  }
+  $('#status').textContent = '3D 加载超时，二维画面仍可查看。';
+}
+async function load() {
+  try {
+    metadata = await (await fetch('/src/fallback-assets/t12/regions.json')).json();
+    $('#effects').setAttribute('viewBox','0 0 '+metadata.width+' '+metadata.height);
+    paint(); updateDetail(); $('#status').textContent = '资源就绪：可查看三种调节效果。';
+  } catch (e) { $('#status').textContent = '资源载入失败：'+e.message; }
+}
+$('#mode2d').onclick=()=>setMode('2d');
+$('#mode3d').onclick=()=>{setMode('3d');if (!loaded) wait3d()};
+document.querySelectorAll('[data-side]').forEach(button=>button.onclick=()=>{
+  side=button.dataset.side;
+  document.querySelectorAll('[data-side]').forEach(b=>b.classList.toggle('selected',b===button));
+  setAction(action);
+});
+document.querySelectorAll('[data-direction]').forEach(button=>button.onclick=()=>{supportDirection=button.dataset.direction;document.querySelectorAll('[data-direction]').forEach(b=>b.classList.toggle('selected',b.dataset.direction===supportDirection));setMode('3d');setAction('support');if(!loaded)wait3d();});
+document.querySelectorAll('[data-action]').forEach(button=>button.onclick=()=>setAction(button.dataset.action));
+setMode(new URLSearchParams(location.search).get('mode')==='3d'?'3d':'2d');
+load().then(()=>{const params=new URLSearchParams(location.search);if(params.get('action')==='support'){supportDirection=params.get('direction')==='deflating'?'deflating':'inflating';document.querySelectorAll('[data-direction]').forEach(b=>b.classList.toggle('selected',b.dataset.direction===supportDirection));setAction('support');}if(mode==='3d')wait3d()});
+</script>
+</body>
+</html>

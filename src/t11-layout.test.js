@@ -57,7 +57,7 @@ test('each T11+ circuit inflates and highlights all its bags, preserving the opp
           moving: true,
         });
         const expected = profile.airbags.filter((b) => b.regionId === region.id);
-        assert.equal(effect.entries.filter((e) => e.pulse.visible).length, expected.length);
+        assert.equal(effect.surface.entries.filter((e) => e.mesh.visible).length, expected.length);
         for (const bag of profile.airbags)
           assert.equal(values.pressures[bag.side][bag.zone], bag.regionId === region.id ? 75 : 0);
         for (const b of bed.airbags)

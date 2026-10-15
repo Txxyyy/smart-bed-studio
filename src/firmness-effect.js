@@ -1,10 +1,11 @@
+import { AdjustmentSurface, adjustmentDirection } from './adjustment-surface.js';
+import { roundAirRow } from './air-shape.js';
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { SHOWROOM_LAYOUT } from './dimensions.js';
 import { mapPoint } from './kinematics.js';
 import { DEFAULT_AIR_BAGS, humanSide } from './air-layout.js';
 import { isSelectedZone } from './firmness.js';
-import { RoundCellEffect } from './air-cell-effect.js';
 
 const vertexShader = `
   attribute vec3 localPosition;
@@ -20,6 +21,7 @@ const fragmentShader = `
   uniform float amount;
   uniform float time;
   uniform float moving;
+  uniform float direction;
   varying vec3 vLocal;
   void main() {
     vec2 p = vLocal.xz + 0.5;
@@ -27,18 +29,14 @@ const fragmentShader = `
     float grid = 1.0 - min(min(cell.x, cell.y), 1.0);
     float edge = 1.0 - smoothstep(0.012, 0.03, min(min(p.x, 1.0-p.x), min(p.y, 1.0-p.y)));
     float scan = exp(-pow((p.y - fract(time * .55)) * 25.0, 2.0)) * moving;
-    float wake = exp(-pow((p.y - fract(time * .55)+.07) * 13.0, 2.0)) * moving;
     float fill = (1.0 - smoothstep(amount-.015, amount+.015, p.x));
     float top = step(.49, vLocal.y);
     float rim = smoothstep(.44, .5, abs(vLocal.y));
     float beat = .65+.35*sin(time*2.8)*sin(time*2.8);
-    float tracks = pow(.5+.5*cos(p.x*6.283*4.0),28.0);
-    float packets = pow(.5+.5*cos((p.y*5.0-time*.95*moving)*6.283),8.0);
-    float flow = tracks*packets*moving;
-    float layers = pow(.5+.5*cos((vLocal.y*6.0-time*.4*moving)*6.283),12.0)*(1.0-top);
-    float brackets = step(.32,abs(vLocal.x))*step(.30,abs(vLocal.z))*edge*top;
-    float alpha = (.035+grid*.32*top+edge*.85*rim+fill*.13*top+layers*.19+brackets*.8+scan*.88*top+wake*.18*top+flow*.72*top) * focus;
-    vec3 light = tint*(1.15+scan*1.2+flow*.75+brackets*.4);
+    float layers = pow(.5+.5*cos((vLocal.y*1.6-time*.45*direction)*6.283),10.0)
+      *(1.0-top)*step(.5,abs(direction));
+    float alpha = (.025+grid*.025*top+edge*.34*rim+fill*.05*top+layers*.58+scan*.10*top) * focus;
+    vec3 light = tint*(1.3+layers*.9);
     gl_FragColor = vec4(light,clamp(alpha*(1.0+moving*beat*.18),0.0,1.0));
   }
 `;
@@ -64,23 +62,21 @@ export class FirmnessEffect {
     this.root = new THREE.Group();
     this.root.name = 'Firmness_Showroom_Overlay';
     this.root.visible = false;
+    this.surface = new AdjustmentSurface(airbags);
+    this.root.add(this.surface.root);
     this.entries = [];
-    // T12 等圆囊阵列使用独立的逐路调节光效；矩形气囊保留原全息层。
-    if (airbags.some((b) => b.shape === 'round-array')) {
-      this.cells = new RoundCellEffect(airbags);
-      this.root.add(...this.cells.objects);
-      this.entries.push(...this.cells.rows);
-    }
     for (const definition of airbags) {
-      if (definition.shape === 'round-array') continue;
       const { side, zone, width, depth } = definition;
-      const geometry = new RoundedBoxGeometry(
-        width,
-        0.12,
-        depth,
-        2,
-        Math.min(0.047, width * 0.2, depth * 0.2),
-      );
+      const geometry =
+        definition.shape === 'round-array'
+          ? roundAirRow(width, depth)
+          : new RoundedBoxGeometry(
+              width,
+              0.12,
+              depth,
+              2,
+              Math.min(0.047, width * 0.2, depth * 0.2),
+            );
       geometry.computeBoundingSphere();
       const rest = geometry.attributes.position.clone(),
         local = rest.clone();
@@ -95,6 +91,7 @@ export class FirmnessEffect {
           amount: { value: 0.5 },
           time: { value: 0 },
           moving: { value: 0 },
+          direction: { value: 0 },
         },
         vertexShader,
         fragmentShader,
@@ -136,21 +133,16 @@ export class FirmnessEffect {
       pulse.renderOrder = 3;
       particles.renderOrder = 3;
       this.root.add(tile, pulse, particles);
-      this.entries.push({ definition, side, zone, tile, pulse, particles, rest });
+      const rowLight = this.surface.entries.find((e) => e.bag === definition);
+      this.entries.push({ definition, side, zone, tile, pulse, particles, rest, rowLight });
     }
   }
 
-  // 返回 true 表示仍有淡入淡出未完成，调用方需继续请求下一帧。
-  update(state) {
-    if (!this.root.visible) {
-      this.cells?.reset();
-      return false;
-    }
-    const { spine, pressures, selection, time, moving } = state;
-    const animating = this.cells?.update(state) ?? false;
+  update({ spine, pressures, selection, time, moving, airStates = {} }) {
+    if (!this.root.visible) return;
+    this.surface.update({ spine, pressures, selection, time, moving, airStates });
     for (const entry of this.entries) {
-      if (entry.round) continue;
-      const { definition, side, zone, tile, pulse, particles, rest } = entry;
+      const { definition, side, zone, tile, pulse, particles, rest, rowLight } = entry;
       const selected = selection.activeRegionIds
         ? selection.activeRegionIds.includes(definition.regionId)
         : isSelectedZone(selection, side, zone);
@@ -162,7 +154,8 @@ export class FirmnessEffect {
           : 'right';
       const sameSide = selection.side === 'both' || selection.side === selectedSide;
       tile.visible = sameSide && selection.kind !== 'heat' && selection.kind !== 'rest';
-      pulse.visible = particles.visible = tile.visible && selected && moving;
+      pulse.visible = particles.visible =
+        tile.visible && selected && moving && !rowLight?.mesh.visible;
       if (!tile.visible) continue;
       const amount = pressures[side][zone] / 100;
       const { width, depth } = definition;
@@ -191,7 +184,10 @@ export class FirmnessEffect {
       const uniforms = tile.material.uniforms;
       uniforms.focus.value = selected ? 1 : sameSide ? 0.11 : 0;
       uniforms.amount.value = amount;
-      uniforms.time.value = time;
+      uniforms.direction.value = selected
+        ? adjustmentDirection(airStates[definition.regionId]?.status)
+        : 0;
+      uniforms.time.value = rowLight?.mesh.visible ? rowLight.elapsed : time;
       uniforms.moving.value = selected && moving ? 1 : 0;
       const phase = (time * 0.7) % 1;
       if (!pulse.visible) continue;
@@ -223,6 +219,5 @@ export class FirmnessEffect {
       particles.geometry.attributes.position.needsUpdate = true;
       particles.geometry.computeBoundingSphere();
     }
-    return animating;
   }
 }

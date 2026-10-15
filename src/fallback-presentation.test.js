@@ -1,0 +1,76 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { MattressViewer } from './mattress-sdk.js';
+import { WebViewBridge } from './webview-bridge.js';
+function viewer() {
+  const v = Object.create(MattressViewer.prototype);
+  Object.assign(v, {
+    bundle: { modelToken: 'm1' },
+    presentationWaiters: new Set(),
+    invalidate() {
+      this.requested = true;
+    },
+  });
+  return v;
+}
+test('presentation waits for actual render submission and preserves revision', async () => {
+  const v = viewer();
+  let done = false;
+  const p = v
+    .requestPresentation({ presentationRevision: 7, modelToken: 'm1' })
+    .then((x) => ((done = true), x));
+  await Promise.resolve();
+  assert.equal(done, false);
+  assert.equal(v.requested, true);
+  v.completePresentation();
+  assert.deepEqual(await p, { modelToken: 'm1', presentationRevision: 7 });
+});
+test('presentation rejects stale tokens and invalid revisions', () => {
+  const v = viewer();
+  assert.throws(() => v.requestPresentation({ presentationRevision: 1, modelToken: 'old' }), {
+    code: 'STALE_MODEL',
+  });
+  for (const revision of [-1, NaN, 1.5, '1', null])
+    assert.throws(
+      () => v.requestPresentation({ presentationRevision: revision, modelToken: 'm1' }),
+      { code: 'INVALID_REQUEST' },
+    );
+});
+test('loss, replacement and disposal cancel every pending presentation', async () => {
+  for (const code of ['CONTEXT_LOST', 'MODEL_SUPERSEDED', 'DISPOSED', 'RENDER_FAILED']) {
+    const v = viewer(),
+      p = v.requestPresentation({ presentationRevision: 1, modelToken: 'm1' });
+    v.cancelPresentation(code);
+    await assert.rejects(p, { code });
+    assert.equal(v.presentationWaiters.size, 0);
+  }
+});
+test('bridge presentation is capability negotiated, session checked and deduplicated', async () => {
+  const v = viewer();
+  v.on = () => () => {};
+  let calls = 0;
+  const request = v.requestPresentation.bind(v);
+  v.requestPresentation = (o) => (calls++, request(o));
+  const b = new WebViewBridge(v, { send() {}, instanceId: 'page' });
+  b.modelToken = 'm1';
+  assert.equal(b.info().capabilities.presentationBarrier, true);
+  const q = {
+    protocolVersion: 1,
+    instanceId: 'page',
+    modelToken: 'm1',
+    requestId: '1',
+    method: 'bridge.present',
+    args: [{ presentationRevision: 9 }],
+  };
+  const a = b.receive(q),
+    retry = b.receive(q);
+  await Promise.resolve();
+  assert.equal(calls, 1);
+  v.completePresentation();
+  assert.deepEqual(await a, await retry);
+  assert.equal((await a).result.presentationRevision, 9);
+  assert.equal(
+    (await b.receive({ ...q, requestId: '2', modelToken: 'old' })).error.code,
+    'STALE_MODEL',
+  );
+});

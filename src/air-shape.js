@@ -1,10 +1,36 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+const capCenterColor = new THREE.Color('#218bca'),
+  capEdgeColor = new THREE.Color('#1469ad');
+const ribColor = new THREE.Color('#1684d5'),
+  grooveColor = new THREE.Color('#07448e');
+
+export function roundAirMaterial({ showroom = false, seal = false } = {}) {
+  // Alpha and clearcoat give the blue polymer a soft shell without a transmission render pass.
+  return new THREE.MeshPhysicalMaterial({
+    name: seal
+      ? 'Blue_Polymer_Seam'
+      : showroom
+        ? 'Blue_Polymer_Support_Reveal'
+        : 'Blue_Polymer_Support',
+    color: seal ? 0x4cb1ee : 0xffffff,
+    vertexColors: !seal,
+    metalness: 0,
+    roughness: seal ? 0.26 : 0.28,
+    clearcoat: 0.6,
+    clearcoatRoughness: 0.3,
+    specularIntensity: 0.4,
+    envMapIntensity: 0.1,
+    ior: 1.38,
+    transparent: true,
+    opacity: seal ? 0.82 : 0.94,
+    depthWrite: !seal,
+    emissive: 0x073461,
+    emissiveIntensity: showroom ? 0.22 : 0.12,
+  });
+}
 // Low-resolution circular bellows share one geometry per row and deform with the bed.
-// With `coords`, bellows also carry cell-local coordinates so one effect shader can draw
-// per-cell rings, gauges and flow without extra draw calls:
-// cellCoord = (unit x, unit z, height 0–1, cap −1/0/1), cellIndex = 0…count−1 along +X.
-export function roundAirRow(width, depth, count = 7, seal = false, coords = false) {
+export function roundAirRow(width, depth, count = 7, seal = false) {
   const pitch = width / count,
     geometries = [];
   for (let cell = 0; cell < count; cell++) {
@@ -13,11 +39,21 @@ export function roundAirRow(width, depth, count = 7, seal = false, coords = fals
       : new THREE.CylinderGeometry(1, 1, 0.12, 24, 6);
     if (seal) geometry.rotateX(Math.PI / 2);
     const p = geometry.attributes.position,
-      coord = coords && !seal ? new Float32Array(p.count * 4) : null;
+      n = geometry.attributes.normal;
+    const colors = seal ? null : new Float32Array(p.count * 3),
+      color = new THREE.Color();
     for (let i = 0; i < p.count; i++) {
       const y = p.getY(i),
         rib = seal ? 1 : 0.94 + 0.06 * Math.cos((y / 0.12) * Math.PI * 6);
-      if (coord) coord.set([p.getX(i), p.getZ(i), y / 0.12 + 0.5, 0], i * 4);
+      if (colors) {
+        // Saturated blue and a darker rim keep overhead lighting from washing the cap white.
+        if (n.getY(i) > 0.5)
+          color
+            .copy(capCenterColor)
+            .lerp(capEdgeColor, Math.min(1, Math.hypot(p.getX(i), p.getZ(i))));
+        else color.copy(grooveColor).lerp(ribColor, (rib - 0.88) / 0.12);
+        color.toArray(colors, i * 3);
+      }
       p.setXYZ(
         i,
         (cell - (count - 1) / 2) * pitch + p.getX(i) * pitch * 0.46 * rib,
@@ -25,18 +61,8 @@ export function roundAirRow(width, depth, count = 7, seal = false, coords = fals
         p.getZ(i) * Math.min(depth, pitch) * 0.46 * rib,
       );
     }
+    if (colors) geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geometry.computeVertexNormals();
-    if (coord) {
-      // Cap faces keep flat ±Y normals; ribbed walls tilt by well under 0.9.
-      const n = geometry.attributes.normal;
-      for (let i = 0; i < p.count; i++)
-        coord[i * 4 + 3] = Math.abs(n.getY(i)) > 0.9 ? Math.sign(n.getY(i)) : 0;
-      geometry.setAttribute('cellCoord', new THREE.BufferAttribute(coord, 4));
-      geometry.setAttribute(
-        'cellIndex',
-        new THREE.BufferAttribute(new Float32Array(p.count).fill(cell), 1),
-      );
-    }
     geometries.push(geometry);
   }
   const merged = mergeGeometries(geometries);

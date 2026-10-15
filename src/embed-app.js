@@ -2,12 +2,13 @@ import { createMattressViewer } from './mattress-sdk.js';
 import { dispatchModel } from './model-dispatch.js';
 import { WebViewBridge } from './webview-bridge.js';
 
+let viewer;
 try {
   if (!window.WebGL2RenderingContext || !window.ResizeObserver || !window.structuredClone)
     throw Object.assign(new Error('当前 WebView 缺少 WebGL 2 或必要的浏览器能力'), {
       code: 'UNSUPPORTED_RUNTIME',
     });
-  const viewer = createMattressViewer(document.querySelector('#model-viewport'));
+  viewer = createMattressViewer(document.querySelector('#model-viewport'));
   const send = (message) => {
     const serialized = JSON.stringify(message);
     if (window.MattressHost?.postMessage) window.MattressHost.postMessage(serialized);
@@ -59,5 +60,6 @@ try {
     }
   }
 } catch (error) {
+  viewer?.dispose();
   window.mattressBootError(error.code || 'RENDERER_INIT_FAILED', error.message);
 }

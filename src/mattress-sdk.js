@@ -7,7 +7,6 @@ import { SmartBed } from './model.js';
 import { MaterialLibrary } from './materials.js';
 import { prepareBrandArtwork } from './branding.js';
 import { FirmnessEffect } from './firmness-effect.js';
-import { airEffectInputs } from './air-cell-effect.js';
 import { HeatingEffect } from './heating-effect.js';
 import { MassageEffect } from './massage-effect.js';
 import { MassageMotion } from './massage.js';
@@ -36,7 +35,6 @@ function release(bundle) {
       for (const m of Array.isArray(o.material) ? o.material : o.material ? [o.material] : [])
         materials.add(m);
     });
-  for (const m of Object.values(bundle.bed?.showroomMaterials || {})) materials.add(m);
   for (const b of bundle.bed?.airbags || []) {
     materials.add(b.mat);
     materials.add(b.showroomMat);
@@ -149,7 +147,16 @@ export class MattressViewer {
     this.inViewport = true;
     this.pageHidden = document.hidden;
     this.lastFrameMs = 0;
-    this.scheduler = new RenderScheduler((t) => this.frame(t), this.budget.maxFps);
+    this.presentationWaiters = new Set();
+    this.scheduler = new RenderScheduler((t) => {
+      try {
+        this.frame(t);
+      } catch (error) {
+        this.cancelPresentation('RENDER_FAILED');
+        this.suspend();
+        this.emit('viewer.error', { code: 'RENDER_FAILED', message: error.message });
+      }
+    }, this.budget.maxFps);
     this.media = matchMedia('(prefers-reduced-motion: reduce)');
     this.motionOverride = reducedMotion;
     this.onMotionChange = () => {
@@ -321,6 +328,8 @@ export class MattressViewer {
     this.observer.observe(container);
     this.onLost = (e) => {
       e.preventDefault();
+      this.contextLost = true;
+      this.cancelPresentation('CONTEXT_LOST');
       this.suspend();
       this.emit('viewer.error', {
         code: 'CONTEXT_LOST',
@@ -328,9 +337,15 @@ export class MattressViewer {
       });
     };
     this.onRestored = () => {
+      this.contextLost = false;
       this.resume();
-      this.emit('state.resyncRequired', {});
     };
+    /**
+     * 订阅事件；type 为 '*' 时接收全部事件。
+     * @param {string} type 例如 'model.ready'、'state.applied'、'animation.started'
+     * @param {(event: object) => void} fn
+     * @returns {() => void} 取消订阅
+     */
     this.renderer.domElement.addEventListener('webglcontextlost', this.onLost);
     this.renderer.domElement.addEventListener('webglcontextrestored', this.onRestored);
     this.resize();
@@ -342,12 +357,6 @@ export class MattressViewer {
     this.assertAlive();
     if (!this.bundle) throw sdkError('MODEL_NOT_READY', '请先设置型号');
   }
-  /**
-   * 订阅事件；type 为 '*' 时接收全部事件。
-   * @param {string} type 例如 'model.ready'、'state.applied'、'animation.started'
-   * @param {(event: object) => void} fn
-   * @returns {() => void} 取消订阅
-   */
   on(type, fn) {
     this.assertAlive();
     if (typeof fn !== 'function') throw sdkError('INVALID_LISTENER', '事件订阅需要函数');
@@ -364,6 +373,11 @@ export class MattressViewer {
         fn(clone({ type, ...detail }));
       } catch (error) {
         console.error('Model event listener:', error);
+        /**
+         * 原子切换型号；同型号换设备也要重新调用。旧 modelToken 随之失效。
+         * @param {string} id 'T11+' / 't11-plus' / 'T12' / 't12' / 'generic' 或已注册的型号
+         * @returns {Promise<ModelInfo>}
+         */
       }
     }
   }
@@ -375,15 +389,11 @@ export class MattressViewer {
     const p = this.registry.register(profile);
     return { id: p.id, revision: p.revision };
   }
-  /**
-   * 原子切换型号；同型号换设备也要重新调用。旧 modelToken 随之失效。
-   * @param {string} id 'T11+' / 't11-plus' / 'T12' / 't12' / 'generic' 或已注册的型号
-   * @returns {Promise<ModelInfo>}
-   */
   async setModel(id) {
     this.assertAlive();
     const profile = this.registry.resolve(id),
       ticket = ++this.generation;
+    this.cancelPresentation('MODEL_SUPERSEDED');
     this.emit('model.loading', { id: profile.id });
     await prepareBrandArtwork();
     this.assertAlive();
@@ -465,6 +475,7 @@ export class MattressViewer {
       release(previous);
       this.fitCamera(0, false);
       this.invalidate();
+      /** @returns {ModelInfo} 当前型号、能力与区域定义的只读副本 */
       const info = this.getModelInfo();
       this.emit('model.ready', info);
       return info;
@@ -477,7 +488,6 @@ export class MattressViewer {
       throw error;
     }
   }
-  /** @returns {ModelInfo} 当前型号、能力与区域定义的只读副本 */
   getModelInfo() {
     this.assertReady();
     const { profile, modelToken } = this.bundle;
@@ -495,6 +505,11 @@ export class MattressViewer {
       airbagCount: profile.airbags.reduce((n, b) => n + (b.cellCount || 1), 0),
       airRowCount: profile.airbags.length,
       waistCircuits: profile.tidal ? this.bundle.waist : null,
+      /**
+       * 批量写入 App 已解析的设备状态（air / heating / massage / pose / online 等）。
+       * @param {object} payload
+       * @param {CallOptions & { kind?: 'patch' | 'snapshot' }} [options] 首次默认 snapshot，之后默认 patch
+       */
       adjustmentGroups: profile.tidal
         ? [
             ...tidalGroups('right', this.bundle.waist.right),
@@ -507,11 +522,6 @@ export class MattressViewer {
       ),
     });
   }
-  /**
-   * 批量写入 App 已解析的设备状态（air / heating / massage / pose / online 等）。
-   * @param {object} payload
-   * @param {CallOptions & { kind?: 'patch' | 'snapshot' }} [options] 首次默认 snapshot，之后默认 patch
-   */
   updateDeviceState(payload, options = {}) {
     this.assertReady();
     if (options.modelToken !== undefined && options.modelToken !== this.bundle.modelToken)
@@ -541,6 +551,13 @@ export class MattressViewer {
         this.invalidate();
         this.emit('state.applied', {
           modelToken: this.bundle.modelToken,
+          /**
+           * T12 潮汐腰部：选择 3/4/5 路作为腰部，左右独立。
+           * @param {Side} side
+           * @param {3 | 4 | 5} circuit
+           * @param {CallOptions} [options]
+           * @returns {ModelInfo}
+           */
           sequence: this.bundle.store.sequence,
         });
       }
@@ -552,16 +569,19 @@ export class MattressViewer {
       });
       throw error;
     }
+    /**
+     * @param {string} id 区域 ID，例如 'left.lumbar'、'right.circuit4'
+     * @param {AirState} state
+     * @param {CallOptions} [options]
+     */
   }
-  /**
-   * T12 潮汐腰部：选择 3/4/5 路作为腰部，左右独立。
-   * @param {Side} side
-   * @param {3 | 4 | 5} circuit
-   * @param {CallOptions} [options]
-   * @returns {ModelInfo}
-   */
   setWaistCircuit(side, circuit, options = {}) {
     this.assertReady();
+    /**
+     * 上报床体实际角度；会接管同一部位的视觉运动。
+     * @param {Pose} pose
+     * @param {CallOptions} [options]
+     */
     const b = this.bundle;
     if (options.modelToken !== undefined && options.modelToken !== b.modelToken)
       throw sdkError('STALE_MODEL', '型号已切换');
@@ -570,20 +590,16 @@ export class MattressViewer {
     b.waist[side] = circuit;
     this.emit('model.mappingChanged', { modelToken: b.modelToken, side, circuit });
     return this.getModelInfo();
+    /**
+     * 仅用于预览的气囊匀速视觉运动，不发送设备命令。
+     * @param {string} id
+     * @param {{ target: number, ratePerSecond: number }} motion
+     * @returns {MotionHandle}
+     */
   }
-  /**
-   * @param {string} id 区域 ID，例如 'left.lumbar'、'right.circuit4'
-   * @param {AirState} state
-   * @param {CallOptions} [options]
-   */
   setAirState(id, state, options = {}) {
     return this.updateDeviceState({ air: { [id]: state } }, { ...options, normalized: true });
   }
-  /**
-   * 上报床体实际角度；会接管同一部位的视觉运动。
-   * @param {Pose} pose
-   * @param {CallOptions} [options]
-   */
   setPose(pose, options = {}) {
     return this.updateDeviceState({ pose }, { ...options, normalized: true });
   }
@@ -592,12 +608,6 @@ export class MattressViewer {
       amount = this.bundle.current.pressures[bag.side][bag.zone] / 100;
     return region.range[0] + amount * (region.range[1] - region.range[0]);
   }
-  /**
-   * 仅用于预览的气囊匀速视觉运动，不发送设备命令。
-   * @param {string} id
-   * @param {{ target: number, ratePerSecond: number }} motion
-   * @returns {MotionHandle}
-   */
   moveAir(id, { target, ratePerSecond } = {}) {
     this.assertReady();
     const region = this.bundle.profile.regions.find((item) => item.id === id);
@@ -622,6 +632,11 @@ export class MattressViewer {
       actionId: idAction,
       regionId: id,
       target,
+      /**
+       * 仅用于预览的床体匀速视觉运动，不发送设备命令。
+       * @param {PoseTargets} targets
+       * @returns {{ back?: MotionHandle, leg?: MotionHandle }}
+       */
       ratePerSecond,
     });
     return { actionId: idAction, durationMs };
@@ -634,11 +649,6 @@ export class MattressViewer {
       this.emit('animation.cancelled', { kind: 'air-motion', actionId: motion.id, regionId: id });
     this.invalidate();
   }
-  /**
-   * 仅用于预览的床体匀速视觉运动，不发送设备命令。
-   * @param {PoseTargets} targets
-   * @returns {{ back?: MotionHandle, leg?: MotionHandle }}
-   */
   movePose(targets) {
     this.assertReady();
     if (!targets || typeof targets !== 'object')
@@ -674,6 +684,11 @@ export class MattressViewer {
     if (!Object.keys(result).length) throw sdkError('INVALID_MOTION', '请至少设置背部或腿部');
     this.invalidate();
     return result;
+    /**
+     * @param {string[]} ids
+     * @param {AirStatus} status
+     * @param {CallOptions} [options]
+     */
   }
   stopPose(key, { silent = false } = {}) {
     for (const part of ['back', 'leg'])
@@ -683,14 +698,10 @@ export class MattressViewer {
         this.poseHolds.delete(part);
         if (motion && !silent)
           this.emit('animation.cancelled', { kind: 'pose-motion', actionId: motion.id, part });
+        /** @param {boolean} online 设备数据是否可用（离线 ≠ 页面隐藏） */
       }
     this.invalidate();
   }
-  /**
-   * @param {string[]} ids
-   * @param {AirStatus} status
-   * @param {CallOptions} [options]
-   */
   setAdjustmentStatus(ids, status, options = {}) {
     this.assertReady();
     if (!Array.isArray(ids) || !ids.length)
@@ -700,7 +711,6 @@ export class MattressViewer {
       { ...options, normalized: true },
     );
   }
-  /** @param {boolean} online 设备数据是否可用（离线 ≠ 页面隐藏） */
   setDataAvailable(online) {
     this.assertReady();
     if (typeof online !== 'boolean') throw sdkError('INVALID_STATE', '数据可用状态必须为布尔值');
@@ -749,6 +759,35 @@ export class MattressViewer {
       renderCount: this.frames,
       suspended: this.suspended,
     });
+  }
+  requestPresentation({ presentationRevision, modelToken } = {}) {
+    this.assertReady();
+    if (this.contextLost) throw sdkError('CONTEXT_LOST', '图形上下文尚未恢复');
+    if (!Number.isSafeInteger(presentationRevision) || presentationRevision < 0)
+      throw sdkError('INVALID_REQUEST', 'presentationRevision 必须为非负安全整数');
+    if (modelToken !== this.bundle.modelToken) throw sdkError('STALE_MODEL', '呈现请求属于旧型号');
+    const promise = new Promise((resolve, reject) =>
+      this.presentationWaiters.add({ presentationRevision, modelToken, resolve, reject }),
+    );
+    this.invalidate();
+    return promise;
+  }
+  cancelPresentation(code) {
+    for (const pending of this.presentationWaiters || []) {
+      pending.reject(sdkError(code, '呈现等待已取消'));
+    }
+    this.presentationWaiters?.clear();
+  }
+  completePresentation() {
+    for (const pending of this.presentationWaiters || []) {
+      if (pending.modelToken === this.bundle?.modelToken)
+        pending.resolve({
+          modelToken: pending.modelToken,
+          presentationRevision: pending.presentationRevision,
+        });
+      else pending.reject(sdkError('STALE_MODEL', '呈现请求属于旧型号'));
+    }
+    this.presentationWaiters?.clear();
   }
   activeTime(now = performance.now()) {
     return (this.backgroundAt ?? now) - (this.backgroundOffset || 0);
@@ -932,7 +971,8 @@ export class MattressViewer {
         : ['scan', 'adjust', 'closing'].includes(reveal.phase)
           ? [reveal]
           : [];
-      b.air.root.visible = this.viewMode === 'solid' && visibleSides.length > 0;
+      // Adjustment is shown by the cover reveal and pouch motion, without flashing overlays.
+      b.air.root.visible = false;
       const visibleSideNames = new Set(visibleSides.map((item) => item.side));
       const renderedActive = this.sideReveals
         ? active
@@ -944,26 +984,13 @@ export class MattressViewer {
         side: visibleSides.length === 2 ? 'both' : (visibleSides[0]?.side ?? null),
         activeRegionIds: this.highlightOverride ?? renderedActive,
       };
-      // 只在气囊层可见时整理光效输入，加热/按摩持续动画期间不产生额外对象。
-      const airInputs = b.air.root.visible
-        ? airEffectInputs(
-            b.profile,
-            b.store.state.air,
-            this.airMotions,
-            this.airHolds,
-            desired.pressures,
-          )
-        : null;
-      const airAnimating = b.air.update({
+      b.air.update({
         spine: b.bed.spine,
         pressures: b.current.pressures,
-        targets: airInputs?.targets,
-        regionStates: airInputs?.regionStates,
-        reveal,
         selection,
         time: t / 1000,
         moving: effectMoving && active.length > 0,
-        animate: effectMoving,
+        airStates: b.store.state.air,
       });
       b.heat.root.visible =
         ['solid', 'xray'].includes(this.viewMode) && b.current.heating.flat().some((v) => v > 0);
@@ -991,7 +1018,7 @@ export class MattressViewer {
         !this.animationPaused &&
         ((this.animationOwner === 'auto' &&
           ['camera', 'scan', 'closing'].includes(b.reveal.phase)) ||
-          (effectMoving && b.air.root.visible && (active.length > 0 || airAnimating)) ||
+          (effectMoving && b.air.root.visible && active.length > 0) ||
           (thermalMoving && b.heat.root.visible) ||
           this.scanFlights.size > 0 ||
           this.airMotions.size > 0 ||
@@ -1021,6 +1048,7 @@ export class MattressViewer {
     this.controls.update(dt);
     moving ||= this.controls.autoRotate;
     this.renderer.render(this.scene, this.activeCamera);
+    this.completePresentation();
     this.frames++;
     this.dirty = false;
     this.lastFrameMs = performance.now() - frameStart;
@@ -1351,12 +1379,14 @@ export class MattressViewer {
         this.cancelScan(side);
         this.animationOwner = 'app';
         this.sideReveals ??= { left: closed(), right: closed() };
+        /** @param {boolean} visible App 告知模型是否可见；不可见时停绘但保留状态 */
         this.sideReveals[side] = { side, progress, phase, ready: true };
         this.invalidate();
       },
       setHighlight: (ids) => {
         this.assertReady();
         if (
+          /** @param {PerformanceMode} mode */
           !Array.isArray(ids) ||
           ids.some((id) => !this.bundle.profile.regions.some((r) => r.id === id))
         )
@@ -1395,14 +1425,12 @@ export class MattressViewer {
       this.invalidate();
     }
   }
-  /** @param {boolean} visible App 告知模型是否可见；不可见时停绘但保留状态 */
   setVisible(visible) {
     this.assertAlive();
     if (typeof visible !== 'boolean') throw sdkError('INVALID_STATE', '可见状态必须为布尔值');
     this.appVisible = visible;
     this.updateVisibility();
   }
-  /** @param {PerformanceMode} mode */
   setPerformanceMode(mode) {
     this.assertAlive();
     const budget = renderBudget(mode, this.mobile, this.pixelRatioLimit);
@@ -1458,6 +1486,7 @@ export class MattressViewer {
     this.renderer.setSize(w, h);
     this.updateVisibility();
     this.perspective.aspect = w / h;
+    /** 释放渲染器、网格、纹理与事件监听；之后调用任何接口抛出 DISPOSED。 */
     this.perspective.updateProjectionMatrix();
     const half = Math.max(1.9, 1.1 / (w / h));
     Object.assign(this.ortho, {
@@ -1483,6 +1512,12 @@ export class MattressViewer {
     this.raf = 0;
     this.camera.cancel();
     this.cancelScan();
+    /**
+     * 创建独立的模型实例。
+     * @param {HTMLElement} container
+     * @param {ViewerOptions} [options]
+     * @returns {MattressViewer}
+     */
     if (this.revealOverride?.phase === 'scan' || this.revealOverride?.phase === 'closing')
       this.revealOverride = closed();
     if (this.sideReveals)
@@ -1502,9 +1537,9 @@ export class MattressViewer {
     this.invalidate();
     this.emit('state.resyncRequired', {});
   }
-  /** 释放渲染器、网格、纹理与事件监听；之后调用任何接口抛出 DISPOSED。 */
   dispose() {
     if (this.disposed) return;
+    this.cancelPresentation('DISPOSED');
     this.disposed = true;
     ++this.generation;
     this.scheduler.cancel();
@@ -1528,12 +1563,6 @@ export class MattressViewer {
   }
 }
 
-/**
- * 创建独立的模型实例。
- * @param {HTMLElement} container
- * @param {ViewerOptions} [options]
- * @returns {MattressViewer}
- */
 export function createMattressViewer(container, options) {
   return new MattressViewer(container, options);
 }

@@ -227,7 +227,7 @@ test('dynamic pouches and independent heat follow the same surface at flat/max p
         moving: true,
       });
       heat.update({ spine: bed.spine, ...values, time: 1, moving: true });
-      assert.equal(air.entries.filter((e) => e.pulse.visible).length, 2);
+      assert.equal(air.surface.entries.filter((e) => e.mesh.visible).length, 2);
       for (const root of [bed.root, air.root, heat.root])
         root.traverse((o) => {
           if (o.geometry)

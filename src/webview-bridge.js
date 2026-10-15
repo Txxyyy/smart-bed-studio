@@ -1,6 +1,6 @@
 import { invokeModel } from './model-dispatch.js';
 export const BRIDGE_VERSION = 1;
-export const RESOURCE_VERSION = '1.0.0';
+export const RESOURCE_VERSION = '1.1.0';
 const globalMethods = new Set([
   'listModels',
   'registerModel',
@@ -38,7 +38,7 @@ export class WebViewBridge {
       instanceId: this.instanceId,
       modelToken: this.modelToken,
       loading: this.loading,
-      capabilities: { webgl2: true, offlineBundle: true },
+      capabilities: { webgl2: true, offlineBundle: true, presentationBarrier: true },
     };
   }
   post(message) {
@@ -123,8 +123,11 @@ export class WebViewBridge {
       if (!this.modelToken) fail('MODEL_NOT_READY', '请先设置型号');
       if (modelToken !== this.modelToken) fail('STALE_MODEL', '调用属于已切换的型号会话');
     }
+    if (method === 'bridge.present')
+      return this.viewer.requestPresentation({ ...args[0], modelToken });
     if (method === 'dispose') {
       this.disposed = true;
+      ++this.generation;
       this.unsubscribe();
     }
     return invokeModel(this.viewer, method, args);
