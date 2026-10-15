@@ -17,7 +17,8 @@ import {
 import { DEFAULT_AIR_BAGS } from './air-layout.js';
 import { CoverReveal } from './cover-reveal.js';
 import { massagePadWeight, massagePulse } from './massage.js';
-import { T12_MASSAGE_LAYOUT, T12_SUPPORT_LAYOUT } from './dimensions.js';
+import { FOUNDATION_FOAM, T12_MASSAGE_LAYOUT } from './dimensions.js';
+import { circuitTubePaths } from './t12-circuits.js';
 import { quiltValley } from './tailored-textile.js';
 import { createTailoredAttachments } from './tailored-attachments.js';
 import { createMattressBranding } from './branding.js';
@@ -149,6 +150,7 @@ function softBox(w, h, d, yCenter, mat, parent, name, longSegments = 96, widthSe
 export class SmartBed {
   constructor(library, { airbags = DEFAULT_AIR_BAGS, coverStyle = 'standard', massage = [] } = {}) {
     this.airLayout = airbags;
+    this.roundArray = airbags.some((b) => b.shape === 'round-array');
     this.massageChannels = massage;
     this.massageWeights = new WeakMap();
     this.massagePads = massage.flatMap((channel) =>
@@ -364,10 +366,10 @@ export class SmartBed {
     this.mattress.add(this.waistband);
     this.waistbandEnabled = false;
     this.innerFoam = softBox(
-      DIMENSIONS.width - 0.05,
-      0.035,
-      DIMENSIONS.length - 0.05,
-      0.045,
+      DIMENSIONS.width - FOUNDATION_FOAM.inset,
+      FOUNDATION_FOAM.thickness,
+      DIMENSIONS.length - FOUNDATION_FOAM.inset,
+      FOUNDATION_FOAM.center,
       library.get('foam'),
       this.mattress,
       'Foundation_Foam',
@@ -424,13 +426,24 @@ export class SmartBed {
             );
       seal.userData.rest = Array.from(seal.geometry.attributes.position.array);
       const valve = box(group, 'Valve', 0.037, 0.028, 0.05, 0, 0, 0, metal, 0.008);
-      const showroomMat = new THREE.MeshStandardMaterial({
-        color: sideIndex === 0 ? 0x165758 : 0x164355,
-        emissive: sideIndex === 0 ? 0x0b5046 : 0x0b324e,
-        emissiveIntensity: 0.3,
-        roughness: 0.45,
-        metalness: 0.18,
-      });
+      // 圆囊阵列在展示态用烟灰色柱体，静止气囊退到背景，调节光效由 air-cell-effect.js 叠加。
+      const showroomMat =
+        definition.shape === 'round-array'
+          ? new THREE.MeshStandardMaterial({
+              color: 0x121b22,
+              emissive: 0x02060a,
+              emissiveIntensity: 1,
+              roughness: 0.62,
+              metalness: 0.08,
+            })
+          : new THREE.MeshStandardMaterial({
+              color: sideIndex === 0 ? 0x165758 : 0x164355,
+              emissive: sideIndex === 0 ? 0x0b5046 : 0x0b324e,
+              emissiveIntensity: 0.3,
+              roughness: 0.45,
+              metalness: 0.18,
+            });
+      seal.sourceMaterial = sealMaterial;
       this.airbags.push({
         ...definition,
         group,
@@ -441,11 +454,24 @@ export class SmartBed {
         zone,
         mat,
         showroomMat,
+        sealMaterial,
         halfHeight: 0.057,
       });
     }
+    // 圆囊阵列展示态：深色底座与石墨色气管，让发光的调节气路与静止部分形成对比。
+    this.showroomMaterials = this.roundArray
+      ? {
+          foam: new THREE.MeshStandardMaterial({ color: 0x0b141b, roughness: 0.9, metalness: 0 }),
+          tube: new THREE.MeshStandardMaterial({
+            color: 0x24323c,
+            roughness: 0.55,
+            metalness: 0.2,
+          }),
+          seal: new THREE.MeshStandardMaterial({ color: 0x141f27, roughness: 0.5, metalness: 0.3 }),
+        }
+      : null;
     this.tubes = [];
-    for (const x of this.airLayout.some((b) => b.shape === 'round-array') ? [] : [-0.1, 0.1]) {
+    for (const x of this.roundArray ? [] : [-0.1, 0.1]) {
       const g = new THREE.TubeGeometry(
         new THREE.LineCurve3(V(x, 0.07, -0.75), V(x, 0.07, 0.76)),
         48,
@@ -462,53 +488,34 @@ export class SmartBed {
       tube.userData.rest = Array.from(g.attributes.position.array);
       this.tubes.push(tube);
     }
-    if (this.airLayout.some((b) => b.shape === 'round-array')) {
+    if (this.roundArray) {
       const colors = [0xff825f, 0xeac94f, 0x6ae8df, 0x86d781, 0xb492ec, 0x69bde5, 0xdd89d3];
-      for (const side of [0, 1]) {
-        const ids = [
-          ...new Set(this.airLayout.filter((b) => b.side === side).map((b) => b.regionId)),
-        ];
-        ids.forEach((id, c) => {
-          const rows = this.airLayout.filter((b) => b.regionId === id),
-            sign = side ? 1 : -1,
-            lane = sign * (0.018 + c * 0.0065),
-            inner = sign * 0.075;
-          const add = (points) => {
-            const g = new THREE.TubeGeometry(
-                new THREE.CatmullRomCurve3(points),
-                32,
-                0.002,
-                4,
-                false,
-              ),
-              tube = mesh(
-                g,
-                new THREE.MeshStandardMaterial({
-                  color: colors[c],
-                  emissive: colors[c],
-                  emissiveIntensity: 0.25,
-                }),
-                this.airGroup,
-                `Circuit_${id}`,
-              );
-            tube.userData.rest = Array.from(g.attributes.position.array);
-            tube.userData.circuitSide = side;
-            this.tubes.push(tube);
-          };
-          add([
-            V(lane, 0.085, T12_SUPPORT_LAYOUT.manifoldEndZ),
-            V(lane, 0.085, T12_SUPPORT_LAYOUT.controlBayStartZ),
-            V(lane, 0.085, rows[0].z + 0.035),
-            V(inner, 0.085, rows[0].z),
-          ]);
-          for (const row of rows)
-            add([
-              V(inner, 0.085, rows[0].z),
-              V(inner, 0.085, row.z + 0.008),
-              V(sign * (Math.abs(row.x) - row.width / 2), 0.085, row.z),
-              V(sign * (Math.abs(row.x) + row.width / 2 - 0.025), 0.085, row.z),
-            ]);
-        });
+      for (const path of circuitTubePaths(this.airLayout)) {
+        const add = (points) => {
+          const g = new THREE.TubeGeometry(
+              new THREE.CatmullRomCurve3(points.map((p) => V(...p))),
+              32,
+              0.002,
+              4,
+              false,
+            ),
+            tube = mesh(
+              g,
+              new THREE.MeshStandardMaterial({
+                color: colors[path.index],
+                emissive: colors[path.index],
+                emissiveIntensity: 0.25,
+              }),
+              this.airGroup,
+              `Circuit_${path.regionId}`,
+            );
+          tube.userData.rest = Array.from(g.attributes.position.array);
+          tube.userData.circuitSide = path.side;
+          tube.sourceMaterial = tube.material;
+          this.tubes.push(tube);
+        };
+        add(path.trunk);
+        path.branches.forEach(add);
       }
     }
     this.anatomy = createAnatomy({
@@ -771,7 +778,12 @@ export class SmartBed {
     if (this.waistband.visible) this.updateSurfaceBinding(this.waistband);
     this.branding.filter((m) => m.visible).forEach((m) => this.updateSurfaceBinding(m));
     const airOffset = this.anatomy.entries.airbag.offset;
+    const showroomAir = this.showroomMaterials && state.showroom ? this.showroomMaterials : null;
+    if (this.showroomMaterials)
+      this.innerFoam.material = showroomAir ? showroomAir.foam : this.lib.get('foam');
     this.tubes.forEach((t) => {
+      if (t.userData.circuitSide !== undefined && this.showroomMaterials)
+        t.material = showroomAir ? showroomAir.tube : t.sourceMaterial;
       t.visible =
         t.userData.circuitSide !== undefined
           ? !state.showroom ||
@@ -803,6 +815,8 @@ export class SmartBed {
           cell.material = state.showroom ? bag.showroomMat : bag.mat;
           this.deformAirPouch(cell, bag, spine, h);
         });
+        if (bag.shape === 'round-array')
+          bag.seal.material = showroomAir ? showroomAir.seal : bag.sealMaterial;
         this.deformAirPouch(bag.seal, bag, spine, h, true);
         const valve = mapPoint(
           spine,

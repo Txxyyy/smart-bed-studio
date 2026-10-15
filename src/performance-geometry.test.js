@@ -141,9 +141,10 @@ test('hologram time animation avoids static geometry work and hidden sides updat
     pulseVersion = version(active.pulse),
     particleVersion = version(active.particles);
   effect.update({ ...state, time: 2 });
+  // 圆囊光点、目标环与流光都由着色器按时间推进，只改时间不重写任何几何。
   assert.equal(version(active.tile), tileVersion);
   assert.equal(version(active.pulse), pulseVersion);
-  assert.ok(version(active.particles) > particleVersion);
+  assert.equal(version(active.particles), particleVersion);
   assert.equal(active.tile.material.uniforms.time.value, 2);
   assert.ok(hidden.every((e) => version(e.tile) === 0 && !e.tile.visible));
   pressures[1][active.zone] = 85;

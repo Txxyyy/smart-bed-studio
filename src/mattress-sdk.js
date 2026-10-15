@@ -7,6 +7,7 @@ import { SmartBed } from './model.js';
 import { MaterialLibrary } from './materials.js';
 import { prepareBrandArtwork } from './branding.js';
 import { FirmnessEffect } from './firmness-effect.js';
+import { airEffectInputs } from './air-cell-effect.js';
 import { HeatingEffect } from './heating-effect.js';
 import { MassageEffect } from './massage-effect.js';
 import { MassageMotion } from './massage.js';
@@ -35,6 +36,7 @@ function release(bundle) {
       for (const m of Array.isArray(o.material) ? o.material : o.material ? [o.material] : [])
         materials.add(m);
     });
+  for (const m of Object.values(bundle.bed?.showroomMaterials || {})) materials.add(m);
   for (const b of bundle.bed?.airbags || []) {
     materials.add(b.mat);
     materials.add(b.showroomMat);
@@ -942,12 +944,26 @@ export class MattressViewer {
         side: visibleSides.length === 2 ? 'both' : (visibleSides[0]?.side ?? null),
         activeRegionIds: this.highlightOverride ?? renderedActive,
       };
-      b.air.update({
+      // 只在气囊层可见时整理光效输入，加热/按摩持续动画期间不产生额外对象。
+      const airInputs = b.air.root.visible
+        ? airEffectInputs(
+            b.profile,
+            b.store.state.air,
+            this.airMotions,
+            this.airHolds,
+            desired.pressures,
+          )
+        : null;
+      const airAnimating = b.air.update({
         spine: b.bed.spine,
         pressures: b.current.pressures,
+        targets: airInputs?.targets,
+        regionStates: airInputs?.regionStates,
+        reveal,
         selection,
         time: t / 1000,
         moving: effectMoving && active.length > 0,
+        animate: effectMoving,
       });
       b.heat.root.visible =
         ['solid', 'xray'].includes(this.viewMode) && b.current.heating.flat().some((v) => v > 0);
@@ -975,7 +991,7 @@ export class MattressViewer {
         !this.animationPaused &&
         ((this.animationOwner === 'auto' &&
           ['camera', 'scan', 'closing'].includes(b.reveal.phase)) ||
-          (effectMoving && b.air.root.visible && active.length > 0) ||
+          (effectMoving && b.air.root.visible && (active.length > 0 || airAnimating)) ||
           (thermalMoving && b.heat.root.visible) ||
           this.scanFlights.size > 0 ||
           this.airMotions.size > 0 ||

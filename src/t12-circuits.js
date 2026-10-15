@@ -49,3 +49,37 @@ export function tidalGroups(side, waist) {
     circuitIds: numbers.map((n) => `${side}.circuit${n}`),
   }));
 }
+
+// 圆囊气路的示意走线（米）。实体气管与调节光效共用，保证两者重合。
+// 每条气路：trunk 从床尾汇流排到首排，branches 再分到该路的每一排；点位按从气源到圆囊的顺序排列。
+export function circuitTubePaths(airbags) {
+  const paths = [];
+  for (const side of [0, 1]) {
+    const ids = [...new Set(airbags.filter((b) => b.side === side).map((b) => b.regionId))];
+    ids.forEach((regionId, index) => {
+      const rows = airbags.filter((b) => b.regionId === regionId),
+        sign = side ? 1 : -1,
+        lane = sign * (D.laneOffset + index * D.lanePitch),
+        inner = sign * D.branchX,
+        y = D.tubeY;
+      paths.push({
+        side,
+        regionId,
+        index,
+        trunk: [
+          [lane, y, D.manifoldEndZ],
+          [lane, y, D.controlBayStartZ],
+          [lane, y, rows[0].z + D.trunkLead],
+          [inner, y, rows[0].z],
+        ],
+        branches: rows.map((row) => [
+          [inner, y, rows[0].z],
+          [inner, y, row.z + D.branchLead],
+          [sign * (Math.abs(row.x) - row.width / 2), y, row.z],
+          [sign * (Math.abs(row.x) + row.width / 2 - D.branchEndInset), y, row.z],
+        ]),
+      });
+    });
+  }
+  return paths;
+}

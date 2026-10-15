@@ -14,6 +14,12 @@ export const AIR_LAYOUT = Object.freeze({
   minHalfHeight: 0.025,
   halfHeightRange: 0.057,
 });
+// 床垫内的基础承托泡棉（气囊底座），比床垫四周各内收 inset/2。
+export const FOUNDATION_FOAM = Object.freeze({
+  inset: 0.05,
+  thickness: 0.035,
+  center: 0.045,
+});
 // Effects stay on the assembled mattress; only small surface offsets prevent z-fighting.
 export const SHOWROOM_LAYOUT = Object.freeze({
   surfaceTop: 0.228,
@@ -164,4 +170,30 @@ export const T12_SUPPORT_LAYOUT = Object.freeze({
   spread: 0.06,
   minHalfHeight: 0.018,
   halfHeightRange: 0.045,
+  // 气路走线为展示示意：主干从床尾汇流排沿中线两侧上行，再沿各排圆囊分支。
+  tubeY: 0.085,
+  laneOffset: 0.018,
+  lanePitch: 0.0065,
+  branchX: 0.075,
+  trunkLead: 0.035,
+  branchLead: 0.008,
+  branchEndInset: 0.025,
+});
+
+// T12 圆囊调节光效的展示尺寸，单位米（标注“倍”的为相对圆囊半径的比例）；只用于展示层。
+export const T12_AIR_FX = Object.freeze({
+  shellGap: 0.004,
+  ringLift: 0.005,
+  ringScale: 1.06, // 倍
+  targetScale: 1, // 倍，目标高于当前时悬浮在顶面上方
+  collarScale: 1.14, // 倍，目标低于当前时套在柱壁外侧
+  sparkScale: 1.12, // 倍
+  sparkRise: 0.022,
+  padMargin: 0.016,
+  padDrop: 0.0015,
+  gridLift: 0.0007,
+  gridPitch: 0.04,
+  gridInset: 0.012,
+  traceRadius: 0.0042,
+  relayoutStep: 0.0015, // 目标环、光点跟随高度变化的最小重排步长
 });
