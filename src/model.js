@@ -150,7 +150,8 @@ function softBox(w, h, d, yCenter, mat, parent, name, longSegments = 96, widthSe
 export class SmartBed {
   constructor(library, { airbags = DEFAULT_AIR_BAGS, coverStyle = 'standard', massage = [] } = {}) {
     this.airLayout = airbags;
-    this.roundArray = airbags.some((b) => b.shape === 'round-array');
+    // 圆囊阵列（T12）与条囊（T11+）共用逐路调节光效、分路气管和展示态深色底座。
+    this.cellFx = airbags.some((b) => b.shape === 'round-array' || b.shape === 'strip');
     this.massageChannels = massage;
     this.massageWeights = new WeakMap();
     this.massagePads = massage.flatMap((channel) =>
@@ -426,23 +427,22 @@ export class SmartBed {
             );
       seal.userData.rest = Array.from(seal.geometry.attributes.position.array);
       const valve = box(group, 'Valve', 0.037, 0.028, 0.05, 0, 0, 0, metal, 0.008);
-      // 圆囊阵列在展示态用烟灰色柱体，静止气囊退到背景，调节光效由 air-cell-effect.js 叠加。
-      const showroomMat =
-        definition.shape === 'round-array'
-          ? new THREE.MeshStandardMaterial({
-              color: 0x121b22,
-              emissive: 0x02060a,
-              emissiveIntensity: 1,
-              roughness: 0.62,
-              metalness: 0.08,
-            })
-          : new THREE.MeshStandardMaterial({
-              color: sideIndex === 0 ? 0x165758 : 0x164355,
-              emissive: sideIndex === 0 ? 0x0b5046 : 0x0b324e,
-              emissiveIntensity: 0.3,
-              roughness: 0.45,
-              metalness: 0.18,
-            });
+      // 圆囊与条囊在展示态用烟灰色囊体，静止气囊退到背景，调节光效由 air-cell-effect.js 叠加。
+      const showroomMat = definition.shape
+        ? new THREE.MeshStandardMaterial({
+            color: 0x121b22,
+            emissive: 0x02060a,
+            emissiveIntensity: 1,
+            roughness: 0.62,
+            metalness: 0.08,
+          })
+        : new THREE.MeshStandardMaterial({
+            color: sideIndex === 0 ? 0x165758 : 0x164355,
+            emissive: sideIndex === 0 ? 0x0b5046 : 0x0b324e,
+            emissiveIntensity: 0.3,
+            roughness: 0.45,
+            metalness: 0.18,
+          });
       seal.sourceMaterial = sealMaterial;
       this.airbags.push({
         ...definition,
@@ -459,7 +459,7 @@ export class SmartBed {
       });
     }
     // 圆囊阵列展示态：深色底座与石墨色气管，让发光的调节气路与静止部分形成对比。
-    this.showroomMaterials = this.roundArray
+    this.showroomMaterials = this.cellFx
       ? {
           foam: new THREE.MeshStandardMaterial({ color: 0x0b141b, roughness: 0.9, metalness: 0 }),
           tube: new THREE.MeshStandardMaterial({
@@ -471,7 +471,7 @@ export class SmartBed {
         }
       : null;
     this.tubes = [];
-    for (const x of this.roundArray ? [] : [-0.1, 0.1]) {
+    for (const x of this.cellFx ? [] : [-0.1, 0.1]) {
       const g = new THREE.TubeGeometry(
         new THREE.LineCurve3(V(x, 0.07, -0.75), V(x, 0.07, 0.76)),
         48,
@@ -488,7 +488,7 @@ export class SmartBed {
       tube.userData.rest = Array.from(g.attributes.position.array);
       this.tubes.push(tube);
     }
-    if (this.roundArray) {
+    if (this.cellFx) {
       const colors = [0xff825f, 0xeac94f, 0x6ae8df, 0x86d781, 0xb492ec, 0x69bde5, 0xdd89d3];
       for (const path of circuitTubePaths(this.airLayout)) {
         const add = (points) => {
@@ -815,8 +815,7 @@ export class SmartBed {
           cell.material = state.showroom ? bag.showroomMat : bag.mat;
           this.deformAirPouch(cell, bag, spine, h);
         });
-        if (bag.shape === 'round-array')
-          bag.seal.material = showroomAir ? showroomAir.seal : bag.sealMaterial;
+        if (bag.shape) bag.seal.material = showroomAir ? showroomAir.seal : bag.sealMaterial;
         this.deformAirPouch(bag.seal, bag, spine, h, true);
         const valve = mapPoint(
           spine,

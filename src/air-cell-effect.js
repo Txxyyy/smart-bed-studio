@@ -1,14 +1,16 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { roundAirRow } from './air-shape.js';
 import { mapPoint, sampleSpine } from './kinematics.js';
 import { DIMENSIONS, FOUNDATION_FOAM, T12_AIR_FX as FX } from './dimensions.js';
 import { humanSide } from './air-layout.js';
 import { circuitTubePaths } from './t12-circuits.js';
 
-// T12 圆囊阵列的调节光效：每一路气囊有“休眠 / 充气 / 放气 / 保压 / 故障”五种外观，
+// T12 圆囊阵列与 T11+ 条囊的调节光效：每一路气囊有“休眠 / 充气 / 放气 / 保压 / 故障”五种外观，
 // 让用户一眼分清哪几排在调节、往哪个方向调。几何仍随床体折弯在 CPU 上贴合，
 // 时间相关的流光、光点和刻度全部在着色器里完成，只改时间时不重写几何。
+// 条囊保持原圆角矩形外形，顶面刻度改为从床中线一端向外的进度条，目标环与光点沿矩形轮廓排布。
 
 // ShaderMaterial 直接写入帧缓冲、不做色彩空间转换，所以颜色按显示值（线性存储）保存。
 const display = (hex) => new THREE.Color().setHex(hex, THREE.LinearSRGBColorSpace);
@@ -72,6 +74,10 @@ const shellFragment = `
   uniform float goal;
   uniform float focus;
   uniform float flash;
+  uniform float rect;
+  uniform vec2 halfSize;
+  uniform float corner;
+  uniform float innerFirst;
   varying vec4 vCoord;
   varying float vOrder;
   varying vec3 vNormal;
@@ -79,6 +85,14 @@ const shellFragment = `
   void main() {
     vec2 q = vCoord.xy;
     float r = length(q), h = vCoord.z;
+    // 圆囊：刻度环从床头方向顺时针点亮。条囊：r 为到顶面圆角矩形边的归一化距离，
+    // 刻度改为从床中线一端向外的进度条。
+    float angle = fract(atan(q.x, -q.y) / 6.2832 + 1.0);
+    if (rect > .5) {
+      vec2 d = abs(q * halfSize) - (halfSize - corner);
+      r = 1.0 + (length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - corner) / min(halfSize.x, halfSize.y);
+      angle = clamp(mix(.5 - .5 * q.x, .5 + .5 * q.x, innerFirst), 0.0, 1.0);
+    }
     float top = step(.5, vCoord.w), wall = 1.0 - top - step(.5, -vCoord.w);
     float facing = abs(dot(normalize(vNormal), normalize(vView)));
     float fres = pow(1.0 - facing, 2.2);
@@ -94,8 +108,7 @@ const shellFragment = `
     float body = wall * (.1 + .5 * fres) * (.65 + .35 * h) + wall * exp(-h * 7.0) * .26;
     float capGlow = top * (.07 + .2 * (1.0 - smoothstep(0.0, .58, r)));
     float rim = top * smoothstep(.86 - aa, .93, r) * .95 + wall * smoothstep(.9, 1.0, h) * .45;
-    // 顶面压力刻度环：从床头方向顺时针点亮到当前值，目标值处有一个亮点。
-    float angle = fract(atan(q.x, -q.y) / 6.2832 + 1.0);
+    // 顶面压力刻度：点亮到当前值，目标值处有一个亮点。
     float band = top * smoothstep(.6 - aa, .64, r) * (1.0 - smoothstep(.76, .8 + aa, r));
     float gauge = band * (.1 + step(angle, level) * .72);
     float tick = goal < 0.0 ? 0.0 : band * (1.0 - smoothstep(.006, .02, abs(angle - goal))) * 1.3;
@@ -124,9 +137,10 @@ const ringFragment = `
   uniform float strength;
   uniform float dashed;
   uniform float spin;
+  uniform float dashes;
   varying float vAngle;
   void main() {
-    float dash = step(.45, fract(vAngle * 16.0 - spin));
+    float dash = step(.45, fract(vAngle * dashes - spin));
     float a = mix(1.0, dash, dashed) * strength;
     if (a < .01) discard;
     gl_FragColor = vec4(tint * a, 1.0);
@@ -174,6 +188,9 @@ const padFragment = `
   uniform float direction;
   uniform float flow;
   uniform float focus;
+  uniform float rect;
+  uniform vec2 cellHalf;
+  uniform float corner;
   varying vec3 vPad;
   void main() {
     vec2 p = vPad.xy * halfSize;
@@ -188,9 +205,13 @@ const padFragment = `
     float fill = inside * (.1 + .16 * smoothstep(-.05, 0.0, sd));
     float moving = clamp(abs(direction), 0.0, 1.0);
     float sweep = inside * pow(.5 + .5 * cos(6.2832 * (vPad.z * 1.6 - flow * .6)), 8.0) * moving;
-    // 每个圆囊底部的光晕，让远景也能看清是哪一排在调节。
+    // 每个圆囊（或整条条囊）底部的光晕，让远景也能看清是哪一排在调节。
     float cx = (floor(p.x / pitch + 3.5) - 3.0) * pitch;
     float ring = length(vec2(p.x - cx, p.y)) - radius;
+    if (rect > .5) {
+      vec2 c = abs(p) - (cellHalf - corner);
+      ring = length(max(c, 0.0)) + min(max(c.x, c.y), 0.0) - corner;
+    }
     float halo = exp(-pow(max(ring, 0.0) / .012, 1.4)) * step(-.004, ring) * inside;
     float a = fill + edge * (.25 + .75 * bracket) + sweep * .42 + halo * .55;
     gl_FragColor = vec4(tint * a * energy * focus, 1.0);
@@ -333,17 +354,90 @@ export class AirRegionFx {
   }
 }
 
-// 一排 7 个圆囊：外壳光效、目标高度环、上升/下落光点和地面光垫。
-export class RoundCellRowFx {
+// 条囊与实体同样使用 RoundedBoxGeometry，圆角与 model.js 的条囊一致。
+export const stripCorner = (width, depth) => Math.min(0.047, width * 0.2, depth * 0.2);
+
+// 圆角矩形轮廓上按弧长均匀取点，t 为 0–1，从床头一侧长边开始绕一周；返回 [x, z]。
+export function roundedRectPoint(hx, hz, r, t) {
+  const sx = hx - r,
+    sz = hz - r,
+    arc = (Math.PI / 2) * r,
+    parts = [2 * sx, arc, 2 * sz, arc, 2 * sx, arc, 2 * sz, arc];
+  let s = (t - Math.floor(t)) * parts.reduce((a, b) => a + b, 0);
+  for (let k = 0; k < 8; k++) {
+    if (s <= parts[k] || k === 7) {
+      const f = parts[k] ? Math.min(1, s / parts[k]) : 0,
+        q = k >> 1;
+      if (k % 2 === 0)
+        return [
+          [-sx + 2 * sx * f, -hz],
+          [hx, -sz + 2 * sz * f],
+          [sx - 2 * sx * f, hz],
+          [-hx, sz - 2 * sz * f],
+        ][q];
+      const a = ((q - 1 + f) * Math.PI) / 2,
+        [cx, cz] = [
+          [sx, -sz],
+          [sx, sz],
+          [-sx, sz],
+          [-sx, -sz],
+        ][q];
+      return [cx + r * Math.cos(a), cz + r * Math.sin(a)];
+    }
+    s -= parts[k];
+  }
+}
+
+// 条囊外壳：与实体相同的圆角矩形，附带与圆囊相同格式的 cellCoord / cellIndex。
+// cellCoord.xy 按顶面平坦区归一化（侧面圆角超出 ±1），cellIndex 沿 +X 连续取 0…6，
+// 让流光仍从靠近气路的一端传到外侧。
+function stripShell(width, depth) {
+  const corner = stripCorner(width, depth),
+    geometry = new RoundedBoxGeometry(width, 0.12, depth, 2, corner),
+    p = geometry.attributes.position,
+    n = geometry.attributes.normal,
+    capX = width / 2 - corner,
+    capZ = depth / 2 - corner,
+    coord = new Float32Array(p.count * 4),
+    index = new Float32Array(p.count);
+  for (let i = 0; i < p.count; i++) {
+    const ny = n.getY(i);
+    coord.set(
+      [
+        p.getX(i) / capX,
+        p.getZ(i) / capZ,
+        p.getY(i) / 0.12 + 0.5,
+        Math.abs(ny) > 0.9 ? Math.sign(ny) : 0,
+      ],
+      i * 4,
+    );
+    index[i] = THREE.MathUtils.clamp(p.getX(i) / width + 0.5, 0, 1) * (CELLS - 1);
+  }
+  geometry.setAttribute('cellCoord', new THREE.BufferAttribute(coord, 4));
+  geometry.setAttribute('cellIndex', new THREE.BufferAttribute(index, 1));
+  return { geometry, capX, capZ };
+}
+
+// 一排 7 个圆囊或一条条囊：外壳光效、目标高度环、上升/下落光点和地面光垫。
+export class AirCellRowFx {
   constructor(definition) {
     this.definition = definition;
-    this.round = true;
+    this.cellFx = true;
+    this.strip = definition.shape === 'strip';
     this.side = definition.side;
     this.zone = definition.zone;
-    const { width, depth, side, zone } = definition;
+    const { width, depth, side, zone } = definition,
+      strip = this.strip;
     this.pitch = width / CELLS;
-    this.radius = Math.min(depth, this.pitch) * 0.46;
-    const geometry = roundAirRow(width, depth, CELLS, false, true);
+    this.radius = strip ? depth / 2 : Math.min(depth, this.pitch) * 0.46;
+    this.corner = strip ? stripCorner(width, depth) : 0;
+    let geometry,
+      capHalf = new THREE.Vector2(1, 1);
+    if (strip) {
+      const shell = stripShell(width, depth);
+      geometry = shell.geometry;
+      capHalf = new THREE.Vector2(shell.capX, shell.capZ);
+    } else geometry = roundAirRow(width, depth, CELLS, false, true);
     geometry.deleteAttribute('uv');
     this.rest = geometry.attributes.position.clone();
     this.restNormal = geometry.attributes.normal.clone();
@@ -366,6 +460,9 @@ export class RoundCellRowFx {
           flash: { value: 0 },
           tilt: { value: 0 },
           innerFirst: { value: innerFirst },
+          rect: { value: strip ? 1 : 0 },
+          halfSize: { value: capHalf },
+          corner: { value: FX.stripCapCorner },
         },
         shellVertex,
         shellFragment,
@@ -373,8 +470,11 @@ export class RoundCellRowFx {
       ),
     );
     this.tile.name = `Air_Cell_Shell_${side}_${zone}`;
-    // 每个圆囊一圈 32 段的环：有目标值时停在目标高度（虚线），否则贴着顶面呼吸。
-    const ringVertices = CELLS * 32 * 2;
+    // 圆囊每个一圈 32 段的环，条囊沿圆角矩形一整圈：有目标值时停在目标高度（虚线），
+    // 否则贴着顶面呼吸。
+    this.ringLoops = strip ? 1 : CELLS;
+    this.ringSegments = strip ? FX.stripRingSegments : 32;
+    const ringVertices = this.ringLoops * this.ringSegments * 2;
     const ringGeometry = new THREE.BufferGeometry();
     ringGeometry.setAttribute(
       'position',
@@ -384,9 +484,11 @@ export class RoundCellRowFx {
       'center',
       new THREE.BufferAttribute(new Float32Array(ringVertices * 3), 3),
     );
-    const angles = new Float32Array(ringVertices);
-    for (let c = 0; c < CELLS; c++)
-      for (let j = 0; j < 32; j++) angles.set([j / 32, (j + 1) / 32], (c * 32 + j) * 2);
+    const angles = new Float32Array(ringVertices),
+      segments = this.ringSegments;
+    for (let c = 0; c < this.ringLoops; c++)
+      for (let j = 0; j < segments; j++)
+        angles.set([j / segments, (j + 1) / segments], (c * segments + j) * 2);
     ringGeometry.setAttribute('angle', new THREE.BufferAttribute(angles, 1));
     this.pulse = new THREE.LineSegments(
       ringGeometry,
@@ -397,6 +499,7 @@ export class RoundCellRowFx {
           dashed: { value: 0 },
           spin: { value: 0 },
           scale: { value: 1 },
+          dashes: { value: strip ? FX.stripDashes : 16 },
         },
         ringVertex,
         ringFragment,
@@ -404,13 +507,13 @@ export class RoundCellRowFx {
     );
     this.pulse.name = `Air_Cell_Target_${side}_${zone}`;
     this.pulse.frustumCulled = false;
-    // 每个圆囊 3 个光点，沿柱壁外侧从底到顶（放气时反向）。
-    const sparkCount = CELLS * 3,
+    // 每个圆囊 3 个光点，条囊沿轮廓均布；从底到顶（放气时反向）。
+    const sparkCount = strip ? FX.stripSparks : CELLS * 3,
       sparkGeometry = new THREE.BufferGeometry(),
       seeds = new Float32Array(sparkCount * 2);
     this.sparkAngles = [];
     for (let i = 0; i < sparkCount; i++) {
-      this.sparkAngles.push((i * 2.39996) % TAU);
+      this.sparkAngles.push(strip ? (i + 0.5) / sparkCount : (i * 2.39996) % TAU);
       seeds.set([(i * 0.618034) % 1, 24 + (i % 3) * 5], i * 2);
     }
     sparkGeometry.setAttribute(
@@ -432,7 +535,7 @@ export class RoundCellRowFx {
     );
     this.particles.name = `Air_Cell_Sparks_${side}_${zone}`;
     this.particles.frustumCulled = false;
-    // 圆囊底部的整排光垫：圆角描边 + 从气路端扫向外侧的光带。
+    // 气囊底部的整排光垫：圆角描边 + 从气路端扫向外侧的光带。
     const padX = width / 2 + FX.padMargin,
       padZ = this.radius + FX.padMargin,
       nx = 28,
@@ -471,6 +574,9 @@ export class RoundCellRowFx {
           direction: { value: 0 },
           flow: { value: 0 },
           focus: { value: 0 },
+          rect: { value: strip ? 1 : 0 },
+          cellHalf: { value: new THREE.Vector2(width / 2, depth / 2) },
+          corner: { value: this.corner },
         },
         padVertex,
         padFragment,
@@ -478,13 +584,19 @@ export class RoundCellRowFx {
       ),
     );
     this.pad.name = `Air_Cell_Pad_${side}_${zone}`;
-    // 与实体圆囊同序：光垫在实体之前、外壳与光点在外罩之前绘制，外罩的局部透明度统一遮罩光效。
+    // 与实体气囊同序：光垫在实体之前、外壳与光点在外罩之前绘制，外罩的局部透明度统一遮罩光效。
     this.pad.renderOrder = 1;
     this.tile.renderOrder = 2;
     this.pulse.renderOrder = 3;
     this.particles.renderOrder = 3;
     this.objects = [this.pad, this.tile, this.pulse, this.particles];
     this.cache = {};
+  }
+
+  // 条囊轮廓按“倍”放大：与圆囊一致地以短边半宽为基准外扩，长边不被拉得过远。
+  outline(scale) {
+    const grow = (scale - 1) * this.radius;
+    return [this.definition.width / 2 + grow, this.definition.depth / 2 + grow, this.corner + grow];
   }
 
   map(spine, x, y, z) {
@@ -537,18 +649,31 @@ export class RoundCellRowFx {
     const positions = this.pulse.geometry.attributes.position,
       centers = this.pulse.geometry.attributes.center,
       radius = this.radius * scale;
-    for (let c = 0; c < CELLS; c++) {
-      const cx = (c - (CELLS - 1) / 2) * this.pitch,
-        center = this.map(spine, cx, height, 0);
-      for (let j = 0; j < 32; j++)
+    if (this.strip) {
+      const segments = this.ringSegments,
+        [hx, hz, r] = this.outline(scale),
+        center = this.map(spine, 0, height, 0);
+      for (let j = 0; j < segments; j++)
         for (let k = 0; k < 2; k++) {
-          const a = ((j + k) / 32) * TAU,
-            p = this.map(spine, cx + Math.sin(a) * radius, height, -Math.cos(a) * radius),
-            i = (c * 32 + j) * 2 + k;
+          const [x, z] = roundedRectPoint(hx, hz, r, (j + k) / segments),
+            p = this.map(spine, x, height, z),
+            i = j * 2 + k;
           positions.setXYZ(i, p.x, p.y, p.z);
           centers.setXYZ(i, center.x, center.y, center.z);
         }
-    }
+    } else
+      for (let c = 0; c < CELLS; c++) {
+        const cx = (c - (CELLS - 1) / 2) * this.pitch,
+          center = this.map(spine, cx, height, 0);
+        for (let j = 0; j < 32; j++)
+          for (let k = 0; k < 2; k++) {
+            const a = ((j + k) / 32) * TAU,
+              p = this.map(spine, cx + Math.sin(a) * radius, height, -Math.cos(a) * radius),
+              i = (c * 32 + j) * 2 + k;
+            positions.setXYZ(i, p.x, p.y, p.z);
+            centers.setXYZ(i, center.x, center.y, center.z);
+          }
+      }
     positions.needsUpdate = centers.needsUpdate = true;
     Object.assign(this.cache, { ringSpine: spine, ringHeight: height, ringScale: scale });
   }
@@ -562,12 +687,14 @@ export class RoundCellRowFx {
     const base = this.particles.geometry.attributes.position,
       rise = this.particles.geometry.attributes.rise,
       radius = this.radius * FX.sparkScale;
+    const [hx, hz, r] = this.strip ? this.outline(FX.sparkScale) : [];
     for (let i = 0; i < base.count; i++) {
       const c = Math.floor(i / 3),
         cx = (c - (CELLS - 1) / 2) * this.pitch,
         a = this.sparkAngles[i],
-        x = cx + Math.sin(a) * radius,
-        z = -Math.cos(a) * radius,
+        [x, z] = this.strip
+          ? roundedRectPoint(hx, hz, r, a)
+          : [cx + Math.sin(a) * radius, -Math.cos(a) * radius],
         from = this.map(spine, x, 0.004, z),
         to = this.map(spine, x, halfHeight * 2 + FX.sparkRise, z);
       base.setXYZ(i, from.x, from.y, from.z);
@@ -628,7 +755,9 @@ export class RoundCellRowFx {
       ring.strength.value = region.active * (aiming ? 0.95 : 0.55);
       ring.dashed.value = aiming ? 1 : 0;
       ring.spin.value = time * 0.6;
-      ring.scale.value = aiming ? 1 : 1 + 0.09 * (0.5 + 0.5 * Math.sin(time * 3.2));
+      ring.scale.value = aiming
+        ? 1
+        : 1 + (this.strip ? FX.stripBreathe : 0.09) * (0.5 + 0.5 * Math.sin(time * 3.2));
       this.layoutSparks(spine, halfHeight);
       const spark = this.particles.material.uniforms;
       spark.tint.value.copy(region.tint);
@@ -782,10 +911,12 @@ export class CircuitTraceFx {
   }
 }
 
-// 组合：所有圆囊排、每侧底板网格、每一路气路走线。
-export class RoundCellEffect {
+export const hasCellFx = (bag) => bag.shape === 'round-array' || bag.shape === 'strip';
+
+// 组合：所有圆囊排或条囊、每侧底板网格、每一路气路走线。
+export class AirCellEffect {
   constructor(airbags) {
-    this.rows = airbags.filter((b) => b.shape === 'round-array').map((b) => new RoundCellRowFx(b));
+    this.rows = airbags.filter(hasCellFx).map((b) => new AirCellRowFx(b));
     this.regions = new Map();
     for (const row of this.rows)
       if (!this.regions.has(row.definition.regionId))
@@ -794,7 +925,7 @@ export class RoundCellEffect {
           new AirRegionFx(row.definition.regionId, row.definition),
         );
     this.grids = [0, 1].map((side) => new SubstrateGridFx(side));
-    this.traces = circuitTubePaths(airbags.filter((b) => b.shape === 'round-array')).map(
+    this.traces = circuitTubePaths(airbags.filter(hasCellFx)).map(
       (path) => new CircuitTraceFx(path),
     );
     this.objects = [

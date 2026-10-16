@@ -257,3 +257,60 @@ test('only round-array beds switch to the dark showroom substrate and restore it
   assert.equal(generic.innerFoam.material, library.foam);
   assert.equal(new FirmnessEffect(DEFAULT_AIR_BAGS).cells, undefined);
 });
+
+test('T11+ strips keep their rounded-rectangle shape and use the same per-circuit effect', () => {
+  const t11 = new ModelRegistry().resolve('T11+');
+  const effect = new FirmnessEffect(t11.airbags);
+  effect.root.visible = true;
+  assert.equal(effect.entries.length, 14);
+  assert.ok(effect.entries.every((e) => e.cellFx && e.strip));
+  const state = {
+    spine: buildSpine(65, 35),
+    pressures: [Array(7).fill(40), Array(7).fill(40)],
+    selection: { side: 'left', kind: 'air', activeRegionIds: ['left.lumbar'] },
+    regionStates: { 'left.lumbar': { status: 'inflating', direction: 1 } },
+    targets: [Array(7).fill(40), Array(7).fill(90)],
+    time: 1,
+    moving: true,
+    animate: true,
+  };
+  advance(effect, state, 30);
+  const lit = rows(effect, 'left.lumbar');
+  assert.equal(lit.length, 2);
+  for (const row of lit) {
+    assert.equal(row.tile.material.uniforms.energy.value, 1);
+    assert.equal(row.tile.material.uniforms.rect.value, 1);
+    sameColor(row.tile.material.uniforms.tint.value, 'inflate');
+    assert.ok(row.pad.visible && row.pulse.visible && row.particles.visible);
+    // 外壳与实体条囊同尺寸：静止几何的包围盒等于条囊宽深。
+    const box = new THREE.Box3().setFromBufferAttribute(row.rest);
+    near(box.max.x - box.min.x, row.definition.width, 1e-6);
+    near(box.max.z - box.min.z, row.definition.depth, 1e-6);
+  }
+  for (const row of effect.entries.filter((e) => e.definition.regionId !== 'left.lumbar'))
+    assert.ok(!row.pulse.visible && row.tile.visible === (row.side === 1));
+  assert.deepEqual(
+    effect.cells.traces.filter((t) => t.mesh.visible).map((t) => t.regionId),
+    ['left.lumbar'],
+  );
+  for (const object of effect.cells.objects)
+    if (object.visible) assert.ok(object.geometry.attributes.position.array.every(Number.isFinite));
+  // 展示态切换为与 T12 相同的深色底座和石墨色气管，退出后恢复原材质。
+  const library = Object.fromEntries(
+    Object.keys(MATERIAL_CONFIG).map((id) => [id, new THREE.MeshStandardMaterial({ name: id })]),
+  );
+  const bed = new SmartBed({ get: (id) => library[id] }, { airbags: t11.airbags }),
+    base = { back: 0, leg: 0, xray: 0, explode: 0, pressures: state.pressures };
+  bed.update({
+    ...base,
+    showroom: true,
+    airReveal: { side: 'left', phase: 'adjust', progress: 1 },
+  });
+  assert.equal(bed.innerFoam.material, bed.showroomMaterials.foam);
+  assert.ok(
+    bed.airbags.filter((b) => b.group.visible).every((b) => b.cells[0].material === b.showroomMat),
+  );
+  assert.ok(bed.airbags.every((b) => b.cells[0].name === 'Rounded_Rectangular_Air_Pouch'));
+  bed.update({ ...base, xray: 1, showroom: false });
+  assert.equal(bed.innerFoam.material, library.foam);
+});

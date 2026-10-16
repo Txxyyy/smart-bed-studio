@@ -101,7 +101,7 @@ export function validateProfile(source) {
       (b.side === 0 ? b.x >= 0 : b.x <= 0)
     )
       fail('气囊越出床垫或所在半侧');
-    if (b.shape !== undefined && b.shape !== 'round-array') fail('未知气囊形态');
+    if (b.shape !== undefined && !['round-array', 'strip'].includes(b.shape)) fail('未知气囊形态');
     if (b.shape === 'round-array' && b.cellCount !== 7) fail('圆囊阵列每排必须为7个');
     b.zone = counts[b.side]++;
     bagIds.add(b.id);
