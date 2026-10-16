@@ -1,5 +1,8 @@
 import { dispatchModel } from './model-dispatch.js';
 import { createMattressViewer } from './mattress-sdk.js';
+import { BUILTIN_PROFILES } from './model-profiles.js';
+import { FallbackView } from './fallback-view.js';
+import { fallbackWebAssets } from './fallback-web-assets.js';
 import './model-app.css';
 import './massage-controls.css';
 
@@ -11,12 +14,18 @@ const HUMAN_SIDE = { 0: '右侧', 1: '左侧' };
 let viewer,
   info,
   preview,
-  poseUiFrame = 0;
+  poseUiFrame = 0,
+  // 展示方式：3d 为 WebGL 模型；2d 为二维降级预览（与 Flutter 原生降级同一画法）。
+  renderMode = query.get('render') === '2d' ? '2d' : '3d',
+  fallback = null,
+  fallbackModel = null,
+  fallbackPose = '';
 
 document.querySelector('#app').innerHTML = `<div class="model-shell ${embedded ? 'embedded' : ''}">
   <header><a href="?">N O C T I S <small>SMART SLEEP LAB</small></a><span>智能床垫 · 设备状态可视化</span><a href="?studio=1">设计工作台 ↗</a></header>
-  <main><section class="model-stage"><div id="model-viewport"></div><div class="model-heading"><span>ADAPTIVE COMFORT</span><h1>支撑与温暖，融于一体。</h1><p id="model-identity">正在准备模型</p></div><div class="model-status"><i></i><span id="connection-state">等待设备状态</span></div><div class="model-camera"><button data-camera="perspective">整体</button><button data-camera="leftFoot">左侧床尾 70°</button><button data-camera="rightFoot">右侧床尾 70°</button><button data-camera="top">俯视</button><button id="follow-camera">自动跟随</button></div><div class="model-caption"><span>头部 ← · 仰躺人体左右 · → 足部</span><span id="phase-label">完整外观</span></div></section>
+  <main><section class="model-stage"><div id="model-viewport"></div><div id="fallback-stage" hidden><div id="fallback-host"></div><div class="fallback-badge">二维降级 · 固定床尾视角<span id="fallback-pose"></span></div></div><div class="model-heading"><span>ADAPTIVE COMFORT</span><h1>支撑与温暖，融于一体。</h1><p id="model-identity">正在准备模型</p></div><div class="model-status"><i></i><span id="connection-state">等待设备状态</span></div><div class="model-camera"><button data-camera="perspective">整体</button><button data-camera="leftFoot">左侧床尾 70°</button><button data-camera="rightFoot">右侧床尾 70°</button><button data-camera="top">俯视</button><button id="follow-camera">自动跟随</button></div><div class="model-caption"><span>头部 ← · 仰躺人体左右 · → 足部</span><span id="phase-label">完整外观</span></div></section>
   <aside><span class="eyebrow">PRODUCT PROFILE</span><h2>选择床垫型号</h2><p>按仰躺人体左右显示。页面预览只驱动模型效果，不连接设备控制。</p><div class="model-picker"><button data-model="T11+">T11+<small>单侧7囊 · 肩腰臀3路</small></button><button data-model="generic">通用床垫<small>通用外观 · 标准状态格式</small></button><button data-model="T12">T12<small>海军蓝绗缝 · 深棕黑柔光皮革</small></button></div><div id="model-notice" role="status"></div>
+  <section class="control-card"><div class="control-title">展示方式 <small>RENDER MODE</small></div><p>二维降级模拟电视等终端无法运行 3D 时的画面：不显示 3D 模型，固定床尾视角，调节时用光效标出对应部位。下方控制在两种方式下通用。</p><div class="two-buttons"><button data-render="3d">3D 模型</button><button data-render="2d">二维降级</button></div></section>
   <section class="control-card"><div class="control-title">自适应调节 <small>ADAPTIVE RUN</small></div><p>每侧按部位顺序运行一次；双侧可同时继续。</p><div class="two-buttons"><button data-run-side="left">运行人体左侧</button><button data-run-side="right">运行人体右侧</button></div><div id="run-progress" class="run-progress">尚未开始预览</div></section>
   <section class="control-card"><div class="control-title">腰腿加热 <small>HEATING</small></div><div id="heating-controls" class="heat-controls"></div></section>
   <section id="massage-card" class="control-card" hidden><div class="control-title">气囊按摩 <small>MASSAGE</small></div><p>左右独立，三组气囊依次缓慢起伏。</p><div id="massage-controls"></div><p class="effect-legend"><i></i>紫色按摩 · 橙金加热 · 青蓝支撑</p></section>
@@ -210,6 +219,7 @@ function modelReady(next) {
       tidal.append(label);
     }
   renderState();
+  syncFallbackModel().catch((error) => notice(`二维降级资源载入失败：${error.message}`));
 }
 function setHeat(id, level) {
   viewer.heating.setState(id, level ? { level, status: 'heating' } : { level: 0, status: 'off' });
@@ -238,6 +248,76 @@ function setPose(back, leg) {
   $('#back-angle').value = back;
   $('#leg-angle').value = leg;
   renderState();
+}
+
+// 二维降级读取与 3D 相同的设备状态和扫描进度，切换展示方式时调节、加热、按摩继续进行。
+// 3D 模型在二维方式下只隐藏画面，仍作为状态与扫描时序的来源；正式降级由 Flutter 原生绘制，不运行 WebGL。
+function fallbackFrame() {
+  let state;
+  try {
+    state = viewer.getState();
+  } catch {
+    return null;
+  }
+  const { observed, rendered, reveal, motion } = state;
+  const sides = reveal?.sides || (reveal?.side ? { [reveal.side]: reveal } : {}),
+    reveals = {},
+    scanning = {};
+  for (const side of ['left', 'right']) {
+    const record = sides[side];
+    reveals[side] = record && record.phase !== 'closed' ? record.progress : 0;
+    scanning[side] = !!record && ['scan', 'closing'].includes(record.phase);
+  }
+  const pose = ` · 背部 ${Math.round(rendered.back)}° · 腿部 ${Math.round(rendered.leg)}°`;
+  if (pose !== fallbackPose) $('#fallback-pose').textContent = fallbackPose = pose;
+  return {
+    online: !observed.initialized || observed.online,
+    animate: !state.animationPaused,
+    air: observed.air,
+    motions: Object.fromEntries(motion.air.map((item) => [item.regionId, item])),
+    highlight: null,
+    reveals,
+    scanning,
+    heating: observed.heating,
+    heatingMax: Object.fromEntries((info?.heating || []).map((h) => [h.id, h.maxLevel])),
+    massage: observed.massage,
+  };
+}
+async function syncFallbackModel() {
+  if (renderMode !== '2d' || !info || fallbackModel === info.id) return;
+  fallbackModel = info.id;
+  const resources = fallbackWebAssets(info.id);
+  if (!resources) {
+    notice(`${info.name} 没有二维降级资源。`);
+    return;
+  }
+  fallback ??= new FallbackView($('#fallback-host'));
+  await fallback.setModel(info.id, {
+    ...resources,
+    profile: BUILTIN_PROFILES.find((profile) => profile.id === info.id),
+  });
+}
+function setRenderMode(mode) {
+  renderMode = mode;
+  const flat = mode === '2d';
+  $('.model-shell').classList.toggle('fallback-mode', flat);
+  $('#fallback-stage').hidden = !flat;
+  document
+    .querySelectorAll('[data-render]')
+    .forEach((button) => button.classList.toggle('selected', button.dataset.render === mode));
+  // 二维降级为固定床尾视角，没有镜头与内部结构展示。
+  document
+    .querySelectorAll('[data-camera], #follow-camera, [data-view]')
+    .forEach((button) => (button.disabled = flat));
+  if (flat) {
+    fallback ??= new FallbackView($('#fallback-host'));
+    fallback.start(fallbackFrame);
+    syncFallbackModel().catch((error) => notice(`二维降级资源载入失败：${error.message}`));
+  } else fallback?.stop();
+  const url = new URL(location.href);
+  if (flat) url.searchParams.set('render', '2d');
+  else url.searchParams.delete('render');
+  history.replaceState(null, '', url);
 }
 
 class PreviewController {
@@ -413,6 +493,12 @@ try {
     notice('镜头将随后启动的调节侧转向对应床尾 70° 方位、30° 俯看视角。');
   });
   $('#reset-demo').addEventListener('click', () => preview.reset());
+  document
+    .querySelectorAll('[data-render]')
+    .forEach((button) =>
+      button.addEventListener('click', () => setRenderMode(button.dataset.render)),
+    );
+  setRenderMode(renderMode);
   await viewer.setModel(query.get('model') || 'T11+');
 } catch (error) {
   notice(error.message);

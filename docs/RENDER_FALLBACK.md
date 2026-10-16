@@ -79,7 +79,7 @@ MattressView(
 
 软硬调节采用贴合气囊的青色柔光和细弧，不绘制发光矩形；同时调节多个区域时降低光圈密度，避免满屏亮环。加热使用铺在床面的暖橙椭圆渐变；按摩使用低饱和紫色扩散光圈。离线降低亮度，暂停、减少动态效果和 staticImage 保留静态状态表达。二维不模拟真实床体折弯，姿态仍以数值和示意显示。
 
-运行 `npm run dev` 后打开 `/fallback-compare.html?mode=2d`，可切换 T11+ / T12 的原有 3D 与新版二维，并体验左右侧支撑、加热、按摩。网页为视觉对比入口；Flutter 仍使用原生 Canvas 和本地资源，网页效果验证不替代原生渲染及电视实机验收。RenderPolicy、Session 和设备状态接口保持原有契约。
+运行 `npm run dev` 后，主页面右侧控制台的“展示方式”可直接在 3D 模型与二维降级之间切换（或打开 `/?render=2d`），调节、加热、按摩和床体控制在两种方式下通用。另可打开 `/fallback-compare.html?mode=2d`，切换 T11+ / T12 的原有 3D 与新版二维，并体验左右侧支撑、加热、按摩。网页为视觉对比入口；Flutter 仍使用原生 Canvas 和本地资源，网页效果验证不替代原生渲染及电视实机验收。RenderPolicy、Session 和设备状态接口保持原有契约。
 
 ### 2026-09-28 视觉修订：完整外罩与柔边区域光
 
@@ -112,4 +112,4 @@ MattressView(
 - 资源：`npm run export:fallback`（Playwright + 本机 Chrome，`PLAYWRIGHT_MODULE` 可指向全局安装的 playwright/index.mjs）从 3D 渲染出 `base.png`（完整外罩）、`reveal-left/right.png`（该侧揭开：38% 外罩、深色气囊、底板网格、气路，压力统一为展示值 50）以及每一路气囊的 `glow-<区域ID>.png`。光效层以中性白色渲染该路点亮状态，取与未点亮帧的逐像素差（两帧揭开侧外罩临时全透明以免饱和偏色，差值乘外罩透光率 0.62，取三通道均值），按“白色 + alpha = 光量”裁切存储；`regions.json` 的气路记录 `glow: {image, x, y, width, height, sha256}`，型号目录给出 `fallback.glow` 资源路径并校验哈希与尺寸。
 - 呈现：某侧开始调节时，该侧床垫随扫描线从床头到床尾换成透视层（与 3D 外罩揭开同一进度），调节中的气路光效层按充气青 #16c8ff / 放气琥珀 #ff8a1e / 保压浅青 #7fe2ff（72%–100% 呼吸）/ 故障红 #ff3048（静态）着色后加色叠加；充放气时再叠一段从床中线扫向床边的流光（放气反向）。同侧其余气路保持透视层里的 3D 休眠外观；结束时扫描退场、最后的气路随之淡出。没有扫描时（App 自管时序、故障、静态或减少动态）有光效即直接揭开。静态、暂停和减少动态时无流光、呼吸与扫描动画。
 - 回退：缺少透视层或光效层（旧资源、自定义型号或加载失败）时，回退为按 `surface` 单应变换把气囊真实位置投影到床面绘制的亮边与柔光。`cells` 仅为契约兼容保留，不再用于绘制。自定义型号使用此回退时需提供四点 `surface` 与每个气囊有效的 `x / z / width / depth`。
-- 3D 气囊光效、材质或展示态改动后，需重跑 `npm run export:fallback` 再 `npm run build:flutter`。实现见 `flutter/smart_mattress_viewer/lib/src/presentation/soft_light_painter.dart` 与 `fallback_layers.dart`；网页评审页 `fallback-compare.html` 用同一画法和参数，二者同步修改。加热、按摩表现不变。
+- 3D 气囊光效、材质或展示态改动后，需重跑 `npm run export:fallback` 再 `npm run build:flutter`。实现见 `flutter/smart_mattress_viewer/lib/src/presentation/soft_light_painter.dart` 与 `fallback_layers.dart`；网页二维画面 `src/fallback-view.js`（主页面“展示方式”切换与 `fallback-compare.html` 共用）用同一画法和参数，二者同步修改。加热、按摩表现不变。

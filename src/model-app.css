@@ -85,6 +85,38 @@ a {
 #model-viewport canvas {
   display: block;
 }
+/* 二维降级：隐藏 3D 画面（仍提供状态与时序），叠放固定床尾视角的底图与光效。 */
+.fallback-mode #model-viewport {
+  visibility: hidden;
+}
+.fallback-mode .model-camera {
+  display: none;
+}
+#fallback-stage {
+  position: absolute;
+  inset: 0;
+  background: #10191d;
+}
+#fallback-stage[hidden] {
+  display: none;
+}
+#fallback-host {
+  position: absolute;
+  inset: 24px 24px 100px;
+}
+.fallback-badge {
+  position: absolute;
+  bottom: 62px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  color: #bfe9f2;
+  padding: 8px 14px;
+  border: 1px solid #44646c;
+  border-radius: 99px;
+  background: #0d1a1fe6;
+}
 .model-heading {
   position: absolute;
   top: 35px;
@@ -397,6 +429,9 @@ a {
   .model-heading {
     left: 20px;
     top: 26px;
+  }
+  #fallback-host {
+    inset: 150px 12px 100px;
   }
   .model-heading h1 {
     font-size: 22px;
