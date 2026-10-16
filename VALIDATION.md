@@ -1,5 +1,11 @@
 # 验证记录
 
+## 去掉调节引导线 · 2026-10-16
+
+- 按用户要求，调节时不再显示气路发光走线（从床尾沿床中线到调节气路的引导线），3D 与二维都去掉：删除 air-cell-effect 的 CircuitTraceFx 及 T12_AIR_FX.traceRadius，展示态石墨色实体气管保留。重跑 `export:fallback`，T11+ 6 张、T12 14 张光效层更新；完整底图、透视层与 generic 光效层不变。
+- Node：air-cell-effect / performance-geometry 定向 11/11、`npm run check` 127/127 通过（用例改为断言不存在走线对象）；`npm run build:flutter` 通过。Flutter 3.13.9：`flutter analyze` 无问题，`flutter test` 62/62 通过。
+- 视觉：应用内浏览器 T11+ 左侧调节，3D 与二维均无引导线，控制台无错误。T12 与最大折弯本轮未重新目视核看。
+
 ## 主页面集成二维降级切换 · 2026-10-16
 
 - 主页面控制台新增“展示方式”（3D 模型 / 二维降级，`?render=2d`）。二维画面抽成 `src/fallback-view.js`，与 Flutter SoftLightPainter 同一画法；读取同一 SDK 的设备状态、air.moveTo 方向与扫描进度，3D 画面只隐藏（仍提供状态与时序），型号、自适应调节、加热、按摩、床体控制两种方式通用；二维禁用镜头与内部结构按钮，床体角度以数值显示。`fallback-compare.html` 改用同一模块。`npm run build` 把二维图片复制到 `dist/fallback-assets/`（约 9 MB，不内联，`dist/index.html` 仍为 2.4 MB），元数据随脚本打包。

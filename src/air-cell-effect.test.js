@@ -66,11 +66,8 @@ test('T12 adjusting circuits light up while idle circuits on the same side stay 
     assert.ok(!row.pad.visible && !row.pulse.visible && !row.particles.visible);
     if (left) assert.equal(row.tile.material.uniforms.energy.value, 0);
   }
-  const traces = effect.cells.traces.filter((t) => t.mesh.visible);
-  assert.deepEqual(
-    traces.map((t) => t.regionId),
-    ['left.circuit4'],
-  );
+  // 调节时不显示气路发光走线（引导线）。
+  assert.ok(!effect.cells.objects.some((object) => object.name.startsWith('Air_Circuit_Trace')));
   assert.deepEqual(
     effect.cells.grids.map((g) => g.mesh.visible),
     [false, true],
@@ -181,7 +178,6 @@ test('cell effects follow the maximum fold on both sides with finite geometry', 
       const p = object.geometry.attributes.position.array;
       assert.ok(p.every(Number.isFinite), object.name);
     }
-  assert.equal(effect.cells.traces.filter((t) => t.mesh.visible).length, 2);
   // 右侧圆囊从靠近床中线（+X 一端）开始依次点亮。
   const right = rows(effect, 'right.circuit7')[0],
     left = rows(effect, 'left.circuit1')[0];
@@ -289,10 +285,7 @@ test('T11+ strips keep their rounded-rectangle shape and use the same per-circui
   }
   for (const row of effect.entries.filter((e) => e.definition.regionId !== 'left.lumbar'))
     assert.ok(!row.pulse.visible && row.tile.visible === (row.side === 1));
-  assert.deepEqual(
-    effect.cells.traces.filter((t) => t.mesh.visible).map((t) => t.regionId),
-    ['left.lumbar'],
-  );
+  assert.ok(!effect.cells.objects.some((object) => object.name.startsWith('Air_Circuit_Trace')));
   for (const object of effect.cells.objects)
     if (object.visible) assert.ok(object.geometry.attributes.position.array.every(Number.isFinite));
   // 展示态切换为与 T12 相同的深色底座和石墨色气管，退出后恢复原材质。

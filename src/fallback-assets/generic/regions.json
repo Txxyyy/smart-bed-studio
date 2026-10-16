@@ -8,10 +8,7 @@
   "height": 1400,
   "sideConvention": "supine",
   "fit": "contain",
-  "pose": {
-    "back": 0,
-    "leg": 0
-  },
+  "pose": { "back": 0, "leg": 0 },
   "camera": {
     "position": [0, 2.88, 2.89],
     "target": [0, 0.56, -0.04],

@@ -1,11 +1,9 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { roundAirRow } from './air-shape.js';
 import { mapPoint, sampleSpine } from './kinematics.js';
 import { DIMENSIONS, FOUNDATION_FOAM, T12_AIR_FX as FX } from './dimensions.js';
 import { humanSide } from './air-layout.js';
-import { circuitTubePaths } from './t12-circuits.js';
 
 // T12 圆囊阵列与 T11+ 条囊的调节光效：每一路气囊有“休眠 / 充气 / 放气 / 保压 / 故障”五种外观，
 // 让用户一眼分清哪几排在调节、往哪个方向调。几何仍随床体折弯在 CPU 上贴合，
@@ -247,26 +245,6 @@ const gridFragment = `
     gl_FragColor = vec4(tint * a * focus, 1.0);
   }
 `;
-const traceVertex = `
-  attribute float pathDistance;
-  varying float vDistance;
-  void main() {
-    vDistance = pathDistance;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-const traceFragment = `
-  uniform vec3 tint;
-  uniform float energy;
-  uniform float flow;
-  uniform float focus;
-  varying float vDistance;
-  void main() {
-    float packets = pow(.5 + .5 * cos(6.2832 * (vDistance / .12 - flow * 2.0)), 10.0);
-    gl_FragColor = vec4(tint * (.32 + packets * 1.2) * energy * focus, 1.0);
-  }
-`;
-
 const ease = (dt, rate) => 1 - Math.exp(-dt * rate);
 
 // 从设备状态与视觉运动整理光效输入：每一路的状态与方向（显式 inflating/deflating 优先，
@@ -847,73 +825,9 @@ export class SubstrateGridFx {
   }
 }
 
-// 一路气路从床尾汇流排到各排圆囊的发光走线，流光方向随充气/放气反向。
-export class CircuitTraceFx {
-  constructor(path) {
-    this.path = path;
-    this.side = path.side;
-    this.regionId = path.regionId;
-    const pieces = [];
-    const trunkCurve = new THREE.CatmullRomCurve3(path.trunk.map((p) => new THREE.Vector3(...p)));
-    const trunkLength = trunkCurve.getLength();
-    const add = (curve, segments, offset) => {
-      const tube = new THREE.TubeGeometry(curve, segments, FX.traceRadius, 6, false),
-        uv = tube.attributes.uv,
-        length = curve.getLength(),
-        distance = new Float32Array(uv.count);
-      for (let i = 0; i < uv.count; i++) distance[i] = offset + uv.getX(i) * length;
-      tube.setAttribute('pathDistance', new THREE.BufferAttribute(distance, 1));
-      tube.deleteAttribute('uv');
-      tube.deleteAttribute('normal');
-      pieces.push(tube);
-    };
-    add(trunkCurve, 48, 0);
-    for (const branch of path.branches)
-      add(new THREE.CatmullRomCurve3(branch.map((p) => new THREE.Vector3(...p))), 32, trunkLength);
-    const geometry = mergeGeometries(pieces);
-    pieces.forEach((g) => g.dispose());
-    this.rest = Float32Array.from(geometry.attributes.position.array);
-    this.mesh = new THREE.Mesh(
-      geometry,
-      additive(
-        {
-          tint: { value: COLORS.hold.clone() },
-          energy: { value: 0 },
-          flow: { value: 0 },
-          focus: { value: 0 },
-        },
-        traceVertex,
-        traceFragment,
-      ),
-    );
-    this.mesh.name = `Air_Circuit_Trace_${path.regionId}`;
-    this.mesh.renderOrder = 2;
-  }
-  update({ spine, visible, region }) {
-    this.mesh.visible = visible && region.active > 0.002;
-    if (!this.mesh.visible) return;
-    if (this.spine !== spine) {
-      const positions = this.mesh.geometry.attributes.position,
-        rest = this.rest;
-      for (let i = 0; i < positions.count; i++) {
-        const p = mapPoint(spine, rest[i * 3], rest[i * 3 + 1], rest[i * 3 + 2], null, false);
-        positions.setXYZ(i, p.x, p.y, p.z);
-      }
-      positions.needsUpdate = true;
-      this.mesh.geometry.computeBoundingSphere();
-      this.spine = spine;
-    }
-    const u = this.mesh.material.uniforms;
-    u.tint.value.copy(region.tint);
-    u.energy.value = region.active;
-    u.flow.value = region.flow;
-    u.focus.value = 1;
-  }
-}
-
 export const hasCellFx = (bag) => bag.shape === 'round-array' || bag.shape === 'strip';
 
-// 组合：所有圆囊排或条囊、每侧底板网格、每一路气路走线。
+// 组合：所有圆囊排或条囊、每侧底板网格。调节时不显示气路发光走线（引导线）。
 export class AirCellEffect {
   constructor(airbags) {
     this.rows = airbags.filter(hasCellFx).map((b) => new AirCellRowFx(b));
@@ -925,14 +839,7 @@ export class AirCellEffect {
           new AirRegionFx(row.definition.regionId, row.definition),
         );
     this.grids = [0, 1].map((side) => new SubstrateGridFx(side));
-    this.traces = circuitTubePaths(airbags.filter(hasCellFx)).map(
-      (path) => new CircuitTraceFx(path),
-    );
-    this.objects = [
-      ...this.grids.map((g) => g.mesh),
-      ...this.traces.map((t) => t.mesh),
-      ...this.rows.flatMap((r) => r.objects),
-    ];
+    this.objects = [...this.grids.map((g) => g.mesh), ...this.rows.flatMap((r) => r.objects)];
     this.lastTime = null;
   }
   reset() {
@@ -997,12 +904,6 @@ export class AirCellEffect {
     }
     for (const grid of this.grids)
       grid.update({ spine, visible: sideVisible(grid.side), ...scans[grid.side] });
-    for (const trace of this.traces)
-      trace.update({
-        spine,
-        visible: sideVisible(trace.side),
-        region: this.regions.get(trace.regionId),
-      });
     return animating;
   }
 }

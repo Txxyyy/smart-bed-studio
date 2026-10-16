@@ -202,8 +202,6 @@ try {
             for (const row of air.cells?.rows || [])
               if (row.definition.regionId === id)
                 for (const object of row.objects) white(object.material.uniforms);
-            for (const trace of air.cells?.traces || [])
-              if (trace.regionId === id) white(trace.mesh.material.uniforms);
             for (const entry of air.entries)
               if (!entry.cellFx && entry.definition.regionId === id) {
                 white(entry.tile.material.uniforms);

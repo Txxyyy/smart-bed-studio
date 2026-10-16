@@ -8,10 +8,7 @@
   "height": 1400,
   "sideConvention": "supine",
   "fit": "contain",
-  "pose": {
-    "back": 0,
-    "leg": 0
-  },
+  "pose": { "back": 0, "leg": 0 },
   "camera": {
     "position": [0, 2.88, 2.89],
     "target": [0, 0.56, -0.04],
@@ -69,9 +66,9 @@
         "image": "glow-right.shoulder.png",
         "x": 235,
         "y": 510,
-        "width": 368,
-        "height": 535,
-        "sha256": "e91683b1df3e9aeeb629091079d23e3750910e67e21ffcea4986a795c77ec7f7"
+        "width": 346,
+        "height": 146,
+        "sha256": "1e0afae290f3d6212247407dc181b22ef971522bf42c8672949b7428ea8e1c4f"
       }
     },
     {
@@ -104,9 +101,9 @@
         "image": "glow-right.lumbar.png",
         "x": 203,
         "y": 626,
-        "width": 400,
-        "height": 419,
-        "sha256": "23d94498a7cfcc6d84e5ef5b9b3a91dd51030f0aa8c3bde6d8f875f4cdc07d8e"
+        "width": 377,
+        "height": 163,
+        "sha256": "b3d51861d6fa0781efb653c3f3d5a5c1cb8f72481592f9e79be9f20dc13c5970"
       }
     },
     {
@@ -146,9 +143,9 @@
         "image": "glow-right.hip.png",
         "x": 147,
         "y": 762,
-        "width": 447,
-        "height": 283,
-        "sha256": "14db44c11ef0ab670a671cbee07170aca8d3d84f2e495e2045378a90381ba419"
+        "width": 430,
+        "height": 265,
+        "sha256": "f73e07eb6d56d8a03157c3d47bffe4f2f57878beb66b6a49cc901049be92d7ec"
       }
     },
     {
@@ -179,11 +176,11 @@
       ],
       "glow": {
         "image": "glow-left.shoulder.png",
-        "x": 597,
+        "x": 619,
         "y": 510,
-        "width": 368,
-        "height": 535,
-        "sha256": "9037292fc37bf048c30552049277bdfbfaf260fb43b315545943b24af02c1776"
+        "width": 346,
+        "height": 146,
+        "sha256": "fbe717fe7400aa53d1794c658c87242255441f188c3b29a086553fbba607042f"
       }
     },
     {
@@ -214,11 +211,11 @@
       ],
       "glow": {
         "image": "glow-left.lumbar.png",
-        "x": 597,
+        "x": 620,
         "y": 626,
-        "width": 399,
-        "height": 419,
-        "sha256": "ce27ea3560d94d34045085b999e39a94c1ba3239f12d9572ba810acfd7f74732"
+        "width": 376,
+        "height": 163,
+        "sha256": "ba7fdc6384d55d6260e4c1dd6f728c41ca1de00daf288fe2b1bef2c351429a92"
       }
     },
     {
@@ -256,11 +253,11 @@
       ],
       "glow": {
         "image": "glow-left.hip.png",
-        "x": 606,
+        "x": 623,
         "y": 762,
-        "width": 447,
-        "height": 283,
-        "sha256": "141ee7c433d324540514cd8e60b983f7d55700a1bd419c3ed4fbec1049999c97"
+        "width": 430,
+        "height": 265,
+        "sha256": "8680eb3cd6d5e1366154d667145f5ca36ab4e821f7041f6598d823a366b1cbe5"
       }
     },
     {
