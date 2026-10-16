@@ -15,7 +15,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run lint && npm run format:check && npm test && npm run build"
+    "check": "npm run lint && npm run format:check && npm test && npm run build",
+    "export:fallback": "node scripts/export-fallback-assets.mjs",
+    "export:catalog": "node scripts/export-model-catalog.mjs"
   },
   "dependencies": {
     "three": "0.185.1"

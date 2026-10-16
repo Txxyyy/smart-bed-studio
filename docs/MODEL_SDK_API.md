@@ -226,7 +226,7 @@ await window.mattressDispatch({
 
 ## 7. 新型号配置
 
-配置 schemaVersion 为 1。结构参考 `src/model-profiles.js` 的内置配置，动态气囊/热区字段在 `src/air-layout.js`。每个控制区域指定 id、side（0 左/1 右）、name、range；每个气囊指定 regionId、位置、尺寸、影响范围及高度参数。一个 regionId 可以关联多个气囊。热区独立于气囊下标。气囊内部索引由组件生成，App 不引用它。
+配置 schemaVersion 为 1。结构参考 `src/model-profiles.js` 的内置配置，动态气囊/热区字段在 `src/air-layout.js`。每个控制区域指定 id、side（0 右/1 左，按人体仰躺定义）、name、range；每个气囊指定 regionId、位置、尺寸、影响范围及高度参数。一个 regionId 可以关联多个气囊。热区独立于气囊下标。气囊内部索引由组件生成，App 不引用它。
 
 通过 registerModel 注册完整配置，或创建组件时传入 `{profiles:[profile]}`。配置校验覆盖 ID/引用、半侧边界、数量上限、范围、模板、材质及贴图；配置在实例内不可变，不会被运行值改写。程序纹理与外部贴图均可由 appearance.materials 配置。
 
@@ -277,6 +277,16 @@ App 端建议：设备能区分充气和放气时，直接上报 `inflating` / `
 
 构造支持 `performanceMode: 'auto' | 'native' | 'eco' | 'balanced' | 'high'`（默认auto，所有设备native，保留原画质及屏幕刷新节奏）。运行时 `setPerformanceMode(mode)` 切换；`setVisible(false/true)` 与 App 页面生命周期对接；`getPerformanceStats()` 获取计数和档位。三者支持页面 JSON 分发。详细档位、后台停绘语义和验证限制见 [PERFORMANCE.md](PERFORMANCE.md)。
 
-## Flutter 嵌入（1.0.0）
+## Flutter 嵌入（1.1.0）
 
 新增 UI-free 的 embed.html、WebViewBridge 协议 v1 和 flutter/smart_mattress_viewer 组件包。独立入口先建立桥接，由 App 显式 setModel；model.presented 表示型号首帧已提交。旧 ?embed=1 保留 window.mattress / mattressDispatch 及型号查询参数。完整接入见 [FLUTTER_INTEGRATION.md](FLUTTER_INTEGRATION.md)。
+
+## Flutter 原生展示后端
+
+本文件的 JavaScript 接口仍描述 WebView 3D SDK。Flutter 可通过 `RenderPolicy.auto / threeD / twoD / staticImage` 选择展示，原生二维无需 WebView 或 JS 执行。默认仍为 `threeD`，新接入显式使用 auto。
+
+两后端共用设备状态语义、型号区域 ID、null/省略/0 区分、固定 Session 和快照/增量顺序。原生二维以高亮替代 focusSide/focusRegion，任意镜头和结构展示受限；registerModel 需要额外的 fallback 描述和随 App 打包的本地资产，不能将全量 JS 方法视为均可用：详细支持矩阵见 [RENDER_FALLBACK.md](RENDER_FALLBACK.md)。不支持的展示方法返回 `UNSUPPORTED_RENDERER_FEATURE`，型号业务不支持仍使用 `UNSUPPORTED_MASSAGE` 等原错误码。
+
+Flutter 的 `RendererInfo.capabilities` 是展示能力，`MattressModelInfo` 是设备型号能力。后端切换触发重复 onReady，App 重建固定会话并同步最新状态。首帧提交屏障关联型号 token 与展示状态版本，仅证明渲染提交，不能证明硬件动作完成或视觉验收。
+
+原生聚焦返回 `actionId` 与 `representation: highlight`，完成事件为 `presentation.completed`，不是 `camera.completed`。原生 `setPerformanceMode` 返回 `configured`、`applied: false` 并保留 3D 偏好；性能统计中的 camera/triangles/drawCalls/maxFps 为 null。

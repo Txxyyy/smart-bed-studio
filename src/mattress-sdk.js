@@ -149,7 +149,16 @@ export class MattressViewer {
     this.inViewport = true;
     this.pageHidden = document.hidden;
     this.lastFrameMs = 0;
-    this.scheduler = new RenderScheduler((t) => this.frame(t), this.budget.maxFps);
+    this.presentationWaiters = new Set();
+    this.scheduler = new RenderScheduler((t) => {
+      try {
+        this.frame(t);
+      } catch (error) {
+        this.cancelPresentation('RENDER_FAILED');
+        this.suspend();
+        this.emit('viewer.error', { code: 'RENDER_FAILED', message: error.message });
+      }
+    }, this.budget.maxFps);
     this.media = matchMedia('(prefers-reduced-motion: reduce)');
     this.motionOverride = reducedMotion;
     this.onMotionChange = () => {
@@ -321,15 +330,18 @@ export class MattressViewer {
     this.observer.observe(container);
     this.onLost = (e) => {
       e.preventDefault();
+      this.contextLost = true;
+      this.cancelPresentation('CONTEXT_LOST');
       this.suspend();
       this.emit('viewer.error', {
         code: 'CONTEXT_LOST',
         message: '图形上下文丢失，请恢复后提交最新状态',
       });
     };
+    // resume() 已发出一次 state.resyncRequired。
     this.onRestored = () => {
+      this.contextLost = false;
       this.resume();
-      this.emit('state.resyncRequired', {});
     };
     this.renderer.domElement.addEventListener('webglcontextlost', this.onLost);
     this.renderer.domElement.addEventListener('webglcontextrestored', this.onRestored);
@@ -384,6 +396,7 @@ export class MattressViewer {
     this.assertAlive();
     const profile = this.registry.resolve(id),
       ticket = ++this.generation;
+    this.cancelPresentation('MODEL_SUPERSEDED');
     this.emit('model.loading', { id: profile.id });
     await prepareBrandArtwork();
     this.assertAlive();
@@ -750,6 +763,38 @@ export class MattressViewer {
       suspended: this.suspended,
     });
   }
+  /**
+   * 首帧提交屏障：下一次实际渲染提交后兑现，只证明画面已提交，不代表动画或硬件完成。
+   * @param {{ presentationRevision: number, modelToken: string }} request
+   */
+  requestPresentation({ presentationRevision, modelToken } = {}) {
+    this.assertReady();
+    if (this.contextLost) throw sdkError('CONTEXT_LOST', '图形上下文尚未恢复');
+    if (!Number.isSafeInteger(presentationRevision) || presentationRevision < 0)
+      throw sdkError('INVALID_REQUEST', 'presentationRevision 必须为非负安全整数');
+    if (modelToken !== this.bundle.modelToken) throw sdkError('STALE_MODEL', '呈现请求属于旧型号');
+    const promise = new Promise((resolve, reject) =>
+      this.presentationWaiters.add({ presentationRevision, modelToken, resolve, reject }),
+    );
+    this.invalidate();
+    return promise;
+  }
+  cancelPresentation(code) {
+    for (const pending of this.presentationWaiters || [])
+      pending.reject(sdkError(code, '呈现等待已取消'));
+    this.presentationWaiters?.clear();
+  }
+  completePresentation() {
+    for (const pending of this.presentationWaiters || []) {
+      if (pending.modelToken === this.bundle?.modelToken)
+        pending.resolve({
+          modelToken: pending.modelToken,
+          presentationRevision: pending.presentationRevision,
+        });
+      else pending.reject(sdkError('STALE_MODEL', '呈现请求属于旧型号'));
+    }
+    this.presentationWaiters?.clear();
+  }
   activeTime(now = performance.now()) {
     return (this.backgroundAt ?? now) - (this.backgroundOffset || 0);
   }
@@ -1021,6 +1066,7 @@ export class MattressViewer {
     this.controls.update(dt);
     moving ||= this.controls.autoRotate;
     this.renderer.render(this.scene, this.activeCamera);
+    this.completePresentation();
     this.frames++;
     this.dirty = false;
     this.lastFrameMs = performance.now() - frameStart;
@@ -1505,6 +1551,7 @@ export class MattressViewer {
   /** 释放渲染器、网格、纹理与事件监听；之后调用任何接口抛出 DISPOSED。 */
   dispose() {
     if (this.disposed) return;
+    this.cancelPresentation('DISPOSED');
     this.disposed = true;
     ++this.generation;
     this.scheduler.cancel();

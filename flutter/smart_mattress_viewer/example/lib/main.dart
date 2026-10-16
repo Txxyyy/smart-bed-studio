@@ -22,6 +22,10 @@ class _ExamplePageState extends State<ExamplePage> {
   double back = 0, leg = 0, speed = 3;
   int heat = 0;
   bool hidden = false;
+  RenderPolicy renderPolicy = RenderPolicy.auto;
+  RendererInfo? renderer;
+  int bindingGeneration = 0;
+  final waist = {Side.left: 4, Side.right: 4};
   final massage = {Side.left: false, Side.right: false};
   @override
   void initState() {
@@ -41,7 +45,9 @@ class _ExamplePageState extends State<ExamplePage> {
     }
   }
 
-  Future<void> selectModel(String id) async {
+  Future<void> selectModel(String id, {bool reset = true}) async {
+    final binding = ++bindingGeneration;
+    final initialize = reset || latest.isEmpty;
     if (mounted)
       setState(() {
         session = null;
@@ -49,34 +55,46 @@ class _ExamplePageState extends State<ExamplePage> {
         message = '加载 $id';
       });
     final next = await controller.setModel(id);
-    latest.clear();
-    latest.addAll({
-      'air': {
-        for (final r in next.modelInfo.regions)
-          r['id']: {'value': 35, 'status': 'idle'}
-      },
-      'heating': {
-        for (final r in next.modelInfo.heating)
-          r['id']: {'level': 0, 'status': 'off'}
-      },
-      if (next.modelInfo.supportsMassage)
-        'massage': <String, dynamic>{
-          'left': {'status': 'off'},
-          'right': {'status': 'off'}
+    if (!mounted || binding != bindingGeneration || !next.isCurrent) return;
+    if (initialize) {
+      waist[Side.left] = 4;
+      waist[Side.right] = 4;
+      latest.clear();
+      latest.addAll({
+        'air': {
+          for (final r in next.modelInfo.regions)
+            r['id']: {'value': 35, 'status': 'idle'}
         },
-      'pose': {'back': 0, 'leg': 0},
-      'online': true,
-    });
+        'heating': {
+          for (final r in next.modelInfo.heating)
+            r['id']: {'level': 0, 'status': 'off'}
+        },
+        if (next.modelInfo.supportsMassage)
+          'massage': <String, dynamic>{
+            'left': {'status': 'off'},
+            'right': {'status': 'off'}
+          },
+        'pose': {'back': 0, 'leg': 0},
+        'online': true,
+      });
+    }
+    if (next.modelInfo.supportsTidal) {
+      for (final side in Side.values)
+        await next.setWaistCircuit(side, waist[side]!);
+    }
+    if (!mounted || binding != bindingGeneration || !next.isCurrent) return;
     await next.applySnapshot(MattressState.fromJson(latest));
-    if (!mounted || !next.isCurrent) return;
+    if (!mounted || binding != bindingGeneration || !next.isCurrent) return;
     setState(() {
       session = next;
       region = next.modelInfo.regions.first['id'] as String;
-      back = 0;
-      leg = 0;
-      heat = 0;
-      massage[Side.left] = false;
-      massage[Side.right] = false;
+      if (initialize) {
+        back = 0;
+        leg = 0;
+        heat = 0;
+        massage[Side.left] = false;
+        massage[Side.right] = false;
+      }
       message = '$id 已就绪 · ${next.modelInfo.airbagCount} 个支撑气囊';
     });
   }
@@ -119,7 +137,7 @@ class _ExamplePageState extends State<ExamplePage> {
   }
 
   Future<void> movePose() async {
-    latest['pose'] = {'back': back, 'leg': leg};
+    // This is a visual target, not a device observation.
     await session!.movePose(
         back: PoseTarget(back, degreesPerSecond: speed),
         leg: PoseTarget(leg, degreesPerSecond: speed));
@@ -127,6 +145,7 @@ class _ExamplePageState extends State<ExamplePage> {
 
   @override
   void dispose() {
+    bindingGeneration++;
     subscription?.cancel();
     controller.dispose();
     super.dispose();
@@ -142,8 +161,12 @@ class _ExamplePageState extends State<ExamplePage> {
           Expanded(
               child: MattressView(
                   controller: controller,
+                  renderPolicy: renderPolicy,
+                  onRenderModeChanged: (info) {
+                    if (mounted) setState(() => renderer = info);
+                  },
                   visible: !hidden,
-                  onReady: () => selectModel(model),
+                  onReady: () => selectModel(model, reset: false),
                   onResyncRequired: (active) => active
                       .applySnapshot(MattressState.fromJson(latest))
                       .then((_) {}),
@@ -160,6 +183,32 @@ class _ExamplePageState extends State<ExamplePage> {
                         runSpacing: 6,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
+                          DropdownButton<RenderPolicy>(
+                            value: renderPolicy,
+                            items: RenderPolicy.values
+                                .map((p) => DropdownMenuItem(
+                                    value: p,
+                                    child: Text({
+                                      'auto': '自动选择',
+                                      'threeD': '仅3D',
+                                      'twoD': '二维光效',
+                                      'staticImage': '静态展示'
+                                    }[p.name]!)))
+                                .toList(),
+                            onChanged: (value) {
+                              if (value != null)
+                                setState(() {
+                                  renderPolicy = value;
+                                  session = null;
+                                });
+                            },
+                          ),
+                          Text(
+                              '实际：${renderer?.activeMode.name ?? '初始化'} ${renderer?.reasonCode ?? ''}'),
+                          if (renderPolicy == RenderPolicy.auto)
+                            TextButton(
+                                onPressed: () => run(controller.retryThreeD),
+                                child: const Text('重试3D')),
                           for (final id in ['T11+', 'T12', 'generic'])
                             OutlinedButton(
                                 onPressed: () => run(() => selectModel(id)),
@@ -175,7 +224,7 @@ class _ExamplePageState extends State<ExamplePage> {
                                   })),
                               child: const Text('性能统计')),
                         ]),
-                    if (session != null) ...[
+                    if (session != null && session!.isCurrent) ...[
                       DropdownButton<String>(
                           value: region,
                           items: session!.modelInfo.regions
@@ -210,8 +259,11 @@ class _ExamplePageState extends State<ExamplePage> {
                           for (final side in Side.values)
                             PopupMenuButton<int>(
                                 tooltip: '选择腰部气路',
-                                onSelected: (value) => run(() =>
-                                    session!.setWaistCircuit(side, value)),
+                                onSelected: (value) => run(() async {
+                                      waist[side] = value;
+                                      await session!
+                                          .setWaistCircuit(side, value);
+                                    }),
                                 itemBuilder: (_) => [
                                       for (final value in [3, 4, 5])
                                         PopupMenuItem(
@@ -226,15 +278,18 @@ class _ExamplePageState extends State<ExamplePage> {
                           TextButton(
                               onPressed: () =>
                                   run(() => session!.focusSide(side)),
-                              child:
-                                  Text('${side == Side.left ? '左' : '右'}侧镜头')),
-                        TextButton(
-                            onPressed: () =>
-                                run(() => session!.setCameraFollow(true)),
-                            child: const Text('自动跟随')),
-                        TextButton(
-                            onPressed: () => run(() => session!.resetCamera()),
-                            child: const Text('重置镜头')),
+                              child: Text(
+                                  '${side == Side.left ? '左' : '右'}侧${renderer?.activeMode == RenderMode.threeD ? '镜头' : '强调'}')),
+                        if (renderer?.capabilities['interactiveCamera'] == true)
+                          TextButton(
+                              onPressed: () =>
+                                  run(() => session!.setCameraFollow(true)),
+                              child: const Text('自动跟随')),
+                        if (renderer?.capabilities['interactiveCamera'] == true)
+                          TextButton(
+                              onPressed: () =>
+                                  run(() => session!.resetCamera()),
+                              child: const Text('重置镜头')),
                       ]),
                       Row(children: [
                         const Text('背部'),

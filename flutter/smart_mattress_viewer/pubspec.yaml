@@ -1,6 +1,6 @@
 name: smart_mattress_viewer
 description: Offline smart mattress viewer with typed Flutter state and animation APIs.
-version: 1.0.0
+version: 1.1.0
 publish_to: none
 environment:
   sdk: '>=3.1.0 <4.0.0'
@@ -17,3 +17,7 @@ flutter:
   assets:
     - assets/mattress.html
     - assets/manifest.json
+    - assets/models/
+    - assets/fallback/t11-plus/
+    - assets/fallback/t12/
+    - assets/fallback/generic/

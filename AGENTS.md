@@ -24,4 +24,7 @@
 
 - Git 远程仓库固定为 https://github.com/Txxyyy/smart-bed-studio.git（私有），origin 指向该仓库；主分支 main。当前项目不是公开的 3D_Electric_Bed 仓库。Codex 与 Claude Code 在此目录继续工作时使用已有 origin，不重复创建或修改全局默认仓库。推送仍以用户授权范围为准。
 
+- Flutter 降级由 RenderPolicy（默认 threeD；auto 显式开启；twoD/staticImage 原生无 WebView）管理，与 PerformanceMode 分开，用于无法加载 3D 或运行卡顿的电视等终端。后端切换使旧固定 Session 失效，App 在重复 onReady 时重新订阅并同步快照；不得改投旧设备消息。二维原始资源在 src/fallback-assets，npm run export:fallback 重导；npm run build:flutter 同步资源、目录、哈希和包内文档。维护 docs/RENDER_FALLBACK.md、FALLBACK_ASSETS.md；不可把首帧提交或模拟故障测试称为电视实机验收。左右按人体仰躺定义，内部 side 1=left、0=right。
+- 降级二维调节光效（2026-10-16，assetRevision 3）取自 3D：export:fallback 用 Playwright 从 3D 渲染完整底图、左右揭开透视层（reveal-*.png）和每路调节光效层（glow-*.png，中性白点亮帧与未点亮帧的逐像素差，乘外罩透光率，白色+alpha 存储）。二维调节时该侧床垫随扫描线从床头到床尾换成透视层，调节气路的光效层按充气青/放气琥珀/保压浅青呼吸/故障红着色后加色叠加，充放气再叠从床中线扫向床边的流光；同侧其余气路保持 3D 休眠外观。缺图时回退为按 surface 床面透视的程序光效。本条取代 2026-09-28 起二维不显示透视图层的规定。改动 3D 气囊光效、材质或展示态后须重跑 export:fallback 再 build:flutter；原生 soft_light_painter.dart / fallback_layers.dart 与网页 fallback-compare.html 同一画法和参数，二者同步修改。加热、按摩沿用原柔光与波纹。
+
 - 本文件是 Codex 与 Claude Code 共用的唯一项目规则；CLAUDE.md 只导入本文件并补充 Claude 端环境差异，规则变更只改这里。分支、交接和生成文件冲突处理见 docs/AGENT_COLLABORATION.md。

@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>降级视觉对比</title>
+  <style>
+    :root{color-scheme:dark;--bg:#10191d;--line:#31434a;--text:#e9eff1;--muted:#9eb2b9}
+    *{box-sizing:border-box}
+    body{margin:0;background:#0b1419;color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    header{height:60px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #283b44;background:#101c22}
+    header strong{font-size:13px;letter-spacing:.2em}
+    header span{font-size:12px;color:var(--muted)}
+    main{max-width:1800px;margin:auto;padding:18px;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px}
+    .stage{height:calc(100vh - 96px);min-height:540px;background:var(--bg);border:1px solid var(--line);border-radius:16px;position:relative;overflow:hidden;display:grid;place-items:center}
+    .stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+    .poster{position:absolute;height:100%;max-width:100%;aspect-ratio:6/7;display:none}
+    .poster img,.poster canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+    .badge{position:absolute;top:16px;left:17px;background:#0a151bcf;border:1px solid #526873;border-radius:99px;padding:7px 12px;font-size:12px;z-index:3}
+    aside{display:flex;flex-direction:column;gap:12px}
+    .card{border:1px solid var(--line);border-radius:13px;padding:16px;background:linear-gradient(150deg,#182b34,#101e25)}
+    .eyebrow{font-size:10px;letter-spacing:.2em;color:#88a3ae}
+    h1{font-size:17px;margin:6px 0 8px}
+    p{margin:0;color:#acbdc2;font-size:13px}
+    .selector{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:5px;background:#0b171d;border-radius:10px;padding:5px;margin-top:10px}
+    button{font:inherit;font-size:13px;color:#d7e7eb;background:transparent;border:1px solid transparent;border-radius:8px;padding:8px 6px;cursor:pointer}
+    button.selected{color:#a9f1ff;background:#263e47;border-color:#547681}
+    select{width:100%;margin-top:10px;font:inherit;font-size:13px;color:#d7e7eb;background:#0b171d;border:1px solid #2f4a54;border-radius:8px;padding:8px}
+    .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:12px;color:#acbdc2}
+    .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+    .status{margin-top:10px;padding:10px;background:#0d1a20;border-radius:8px;color:#c6d9dd;font-size:12px}
+    .note{font-size:11px;color:#8fa6ae;padding:4px 2px}
+    @media(max-width:900px){main{grid-template-columns:1fr;padding:10px}.stage{height:64vh;min-height:0}}
+  </style>
+</head>
+<body>
+<header><strong>FALLBACK · VISUAL REVIEW</strong><span>固定床尾视角 · 人体仰躺左右 · 演示数据</span></header>
+<main>
+  <section class="stage">
+    <iframe id="webgl" title="WebGL 3D"></iframe>
+    <div class="poster" id="poster">
+      <img id="base" alt="床尾正中视角底图">
+      <canvas id="effects" aria-label="二维调节光效"></canvas>
+    </div>
+    <div class="badge" id="badge">二维降级</div>
+  </section>
+  <aside>
+    <section class="card">
+      <span class="eyebrow">MODEL · MODE</span><h1>型号与展示方式</h1>
+      <div class="selector" id="models"><button data-model="t11-plus" class="selected">T11+</button><button data-model="t12">T12</button></div>
+      <div class="selector"><button id="mode2d" class="selected">二维降级</button><button id="mode3d">原始 3D</button></div>
+    </section>
+    <section class="card">
+      <span class="eyebrow">ADJUSTMENT</span><h1>软硬调节</h1>
+      <div class="selector"><button data-side="left" class="selected">人体左侧</button><button data-side="right">人体右侧</button></div>
+      <select id="region" aria-label="气路"></select>
+      <div class="selector" id="statuses">
+        <button data-status="inflating" class="selected">充气</button><button data-status="deflating">放气</button><button data-status="adjusting">保压</button><button data-status="fault">故障</button>
+      </div>
+      <div class="legend"><span><i style="background:#16c8ff"></i>充气</span><span><i style="background:#ff8a1e"></i>放气</span><span><i style="background:#7fe2ff"></i>保压</span><span><i style="background:#ff3048"></i>故障</span></div>
+      <div class="selector"><button data-action="support" class="selected">调节</button><button data-action="heat">加热</button><button data-action="massage">按摩</button><button data-action="clear">待机</button></div>
+      <div class="status" id="status">正在加载资源…</div>
+    </section>
+    <div class="note">二维层与 Flutter 原生 SoftLightPainter 采用同一画法，仅供视觉评审；正式降级由 Flutter 原生绘制。电视性能及兼容性仍需实机验证。</div>
+  </aside>
+</main>
+<script type="module">
+import { BUILTIN_PROFILES } from '/src/model-profiles.js';
+
+// 二维调节光效与 Flutter SoftLightPainter（soft_light_painter.dart）同一画法和参数，二者同步修改。
+// 透视层（reveal-*.png）与每路光效层（glow-*.png）取自 3D 渲染；缺图时回退为按床面透视的程序光效。
+// 画布与底图同为 1200×1400 像素，以下尺寸均为底图像素。
+const COLORS = { inflate: '#16c8ff', deflate: '#ff8a1e', hold: '#7fe2ff', fault: '#ff3048', scan: '#9cf1ff' };
+const FX = {
+  halo: { width: 6, blur: 5, alpha: 0.32 },
+  fill: { alpha: 0.07 },
+  rim: { width: 1.4, blur: 0.6, alpha: 0.85, white: 0.3 },
+  flow: { strip: 9, round: 2, alpha: 0.34, white: 0.35 },
+  scanSeconds: 0.95,
+};
+const HALF_W = 0.8, HALF_L = 0.95;
+
+const $ = (s) => document.querySelector(s);
+const frame = $('#webgl'), poster = $('#poster'), canvas = $('#effects'), ctx = canvas.getContext('2d');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const params = new URLSearchParams(location.search);
+let model = params.get('model') === 't12' ? 't12' : 't11-plus';
+let mode = params.get('mode') === '3d' ? '3d' : '2d';
+let metadata, geometry, side = 'left', regionId = null, status = 'inflating', action = 'support', loaded = false;
+let layers = { reveal: {}, glow: {} };
+const scratch = document.createElement('canvas'), sctx = scratch.getContext('2d');
+const reveal = { left: 0, right: 0 }, revealTarget = { left: 0, right: 0 }, trailing = { left: null, right: null };
+let clock = 0, last = performance.now(), raf = 0;
+
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mix = (a, b, t) => { const x = hex(a), y = hex(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
+const rgba = (h, a) => { const [r, g, b] = hex(h); return `rgba(${r},${g},${b},${Math.max(0, Math.min(1, a))})`; };
+const direction = (s) => (s === 'inflating' ? 1 : s === 'deflating' ? -1 : 0);
+const tintOf = (s) => (s === 'fault' ? COLORS.fault : direction(s) > 0 ? COLORS.inflate : direction(s) < 0 ? COLORS.deflate : COLORS.hold);
+
+// 床面顶面（1.6×1.9 m）到底图的单应变换，与 SurfaceProjection 相同。
+function projection(md) {
+  const p = md.surface.map(([u, v]) => [u * md.width, v * md.height]);
+  const sx = p[0][0] - p[1][0] + p[2][0] - p[3][0], sy = p[0][1] - p[1][1] + p[2][1] - p[3][1];
+  let a, b, c, d, e, f, g = 0, h = 0;
+  if (Math.abs(sx) < 1e-9 && Math.abs(sy) < 1e-9) {
+    [a, b, c, d, e, f] = [p[1][0] - p[0][0], p[3][0] - p[0][0], p[0][0], p[1][1] - p[0][1], p[3][1] - p[0][1], p[0][1]];
+  } else {
+    const dx1 = p[1][0] - p[2][0], dx2 = p[3][0] - p[2][0], dy1 = p[1][1] - p[2][1], dy2 = p[3][1] - p[2][1];
+    const den = dx1 * dy2 - dx2 * dy1;
+    g = (sx * dy2 - dx2 * sy) / den; h = (dx1 * sy - sx * dy1) / den;
+    [a, b, c] = [p[1][0] - p[0][0] + g * p[1][0], p[3][0] - p[0][0] + h * p[3][0], p[0][0]];
+    [d, e, f] = [p[1][1] - p[0][1] + g * p[1][1], p[3][1] - p[0][1] + h * p[3][1], p[0][1]];
+  }
+  return (x, z) => {
+    const u = (x + HALF_W) / (2 * HALF_W), v = (z + HALF_L) / (2 * HALF_L), w = g * u + h * v + 1;
+    return [(a * u + b * v + c) / w, (d * u + e * v + f) / w];
+  };
+}
+function buildGeometry(md, profile) {
+  const map = projection(md), bags = [];
+  for (const bag of profile.airbags) {
+    const sign = bag.x < 0 ? -1 : 1, inner = bag.x - (sign * bag.width) / 2, outer = bag.x + (sign * bag.width) / 2;
+    const round = bag.shape === 'round-array', cells = [];
+    if (round) {
+      const count = bag.cellCount || 7, pitch = bag.width / count, r = Math.min(bag.depth, pitch) * 0.46;
+      for (let i = 0; i < count; i++) {
+        const cx = bag.x + (i - (count - 1) / 2) * pitch;
+        cells.push({ outline: Array.from({ length: 24 }, (_, k) => map(cx + r * Math.cos((k * Math.PI) / 12), bag.z + r * Math.sin((k * Math.PI) / 12))), order: Math.min(1, Math.abs((cx - inner) / (outer - inner))) });
+      }
+    } else {
+      const hx = bag.width / 2 - 0.006, hz = bag.depth / 2 - 0.006, r = Math.min(0.047, bag.width * 0.2, bag.depth * 0.2) - 0.006;
+      const corners = [[bag.x + hx - r, bag.z - hz + r], [bag.x + hx - r, bag.z + hz - r], [bag.x - hx + r, bag.z + hz - r], [bag.x - hx + r, bag.z - hz + r]];
+      const outline = [];
+      corners.forEach(([cx, cz], c) => { for (let k = 0; k <= 6; k++) { const a = ((c - 1 + k / 6) * Math.PI) / 2; outline.push(map(cx + r * Math.cos(a), cz + r * Math.sin(a))); } });
+      cells.push({ outline, order: 0.5 });
+    }
+    for (const cell of cells) cell.path = polygon(cell.outline);
+    bags.push({ regionId: bag.regionId, side: bag.side, round, inner, outer, z: bag.z, depth: bag.depth, cells });
+  }
+  const quad = (x0, x1, z0, z1) => polygon([map(x0, z0), map(x1, z0), map(x1, z1), map(x0, z1)]);
+  return { map, bags, quad, surface: quad(-HALF_W, HALF_W, -HALF_L, HALF_L) };
+}
+function polygon(points) {
+  const p = new Path2D();
+  points.forEach(([x, y], i) => (i ? p.lineTo(x, y) : p.moveTo(x, y)));
+  p.closePath();
+  return p;
+}
+function fill(path, color, alpha, blur = 0) {
+  ctx.filter = blur > 0 ? `blur(${blur}px)` : 'none';
+  ctx.fillStyle = rgba(color, alpha);
+  ctx.fill(path);
+  ctx.filter = 'none';
+}
+const scanFront = (progress) => -HALF_L - 0.03 + (HALF_L * 2 + 0.06) * progress;
+
+function stroke(path, color, alpha, width, blur) {
+  ctx.filter = blur > 0 ? `blur(${blur}px)` : 'none';
+  ctx.lineWidth = width; ctx.lineJoin = 'round';
+  ctx.strokeStyle = rgba(color, alpha);
+  ctx.stroke(path);
+  ctx.filter = 'none';
+}
+// 一路气囊：轮廓柔光晕 + 亮边 + 极淡的内部 + 流光，贴合床面透视。
+function paintCircuit(bags, { tint, energy, dir, fault, animate }) {
+  const t = clock, moving = fault ? 0 : Math.abs(dir);
+  const breathe = animate && !fault && moving === 0 ? 0.5 + 0.5 * Math.sin(t * 2.4) : 0.5;
+  const g = energy * (fault ? 0.95 : 0.82 + 0.18 * breathe);
+  const union = new Path2D();
+  for (const bag of bags) for (const cell of bag.cells) union.addPath(cell.path);
+  fill(union, tint, FX.fill.alpha * g);
+  stroke(union, tint, FX.halo.alpha * g, FX.halo.width, FX.halo.blur);
+  stroke(union, mix(tint, '#ffffff', FX.rim.white), FX.rim.alpha * g, FX.rim.width, FX.rim.blur);
+  if (!animate || moving === 0) return;
+  const light = mix(tint, '#ffffff', FX.flow.white);
+  for (const bag of bags) {
+    if (bag.round) {
+      for (const cell of bag.cells) {
+        const wave = Math.pow(0.5 + 0.5 * Math.cos(2 * Math.PI * (t * 0.8 * dir - cell.order * 0.9)), 4);
+        fill(cell.path, light, FX.flow.alpha * wave * g * moving, FX.flow.round);
+      }
+    } else {
+      const phase = (((t * 0.55 * dir) % 1) + 1) % 1, center = bag.inner + (bag.outer - bag.inner) * (-0.15 + 1.3 * phase), half = 0.075;
+      ctx.save(); ctx.clip(bag.cells[0].path);
+      fill(geometry.quad(center - half, center + half, bag.z - bag.depth / 2, bag.z + bag.depth / 2), light, FX.flow.alpha * g * moving, FX.flow.strip);
+      ctx.restore();
+    }
+  }
+}
+function paintScan(s, progress) {
+  const [x0, x1] = s === 'left' ? [0, HALF_W] : [-HALF_W, 0], z = scanFront(progress);
+  ctx.save(); ctx.clip(geometry.surface);
+  fill(geometry.quad(x0, x1, z - 0.045, z + 0.01), COLORS.scan, 0.3, 6);
+  fill(geometry.quad(x0, x1, z - 0.004, z + 0.004), COLORS.scan, 0.75);
+  ctx.restore();
+}
+// 3D 光效层（白色 + alpha 为光量）按状态着色后加色叠加；充放气时再叠一段从床中线扫向床边的流光。
+function tinted(image, tint) {
+  scratch.width = image.width; scratch.height = image.height;
+  sctx.globalCompositeOperation = 'copy'; sctx.drawImage(image, 0, 0);
+  sctx.globalCompositeOperation = 'source-in'; sctx.fillStyle = tint; sctx.fillRect(0, 0, image.width, image.height);
+  sctx.globalCompositeOperation = 'source-over';
+  return scratch;
+}
+function paintGlow(image, g, { tint, strength, dir, animate, s }) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = Math.min(1, strength);
+  ctx.drawImage(tinted(image, tint), g.x, g.y, g.width, g.height);
+  if (animate && dir) {
+    const phase = (((clock * 0.45 * dir) % 1) + 1) % 1, outward = s === 'left' ? 1 : -1;
+    const inner = outward > 0 ? 0 : g.width, center = inner + outward * g.width * (-0.2 + 1.4 * phase), half = g.width * 0.16;
+    const band = tinted(image, tint), bctx = band.getContext('2d');
+    bctx.globalCompositeOperation = 'destination-in';
+    const gradient = bctx.createLinearGradient(center - half, 0, center + half, 0);
+    gradient.addColorStop(0, 'rgba(255,255,255,0)'); gradient.addColorStop(0.5, 'rgba(255,255,255,1)'); gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    bctx.fillStyle = gradient; bctx.fillRect(0, 0, g.width, g.height);
+    bctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = Math.min(1, strength * 0.9);
+    ctx.drawImage(band, g.x, g.y, g.width, g.height);
+  }
+  ctx.restore();
+}
+function softGlow(color, region, heating, strength) {
+  const xs = region.polygon.map((p) => p[0] * canvas.width), ys = region.polygon.map((p) => p[1] * canvas.height);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+  const rx = ((Math.max(...xs) - Math.min(...xs)) / 2) * (heating ? 1.18 : 1.04), ry = ((Math.max(...ys) - Math.min(...ys)) / 2) * (heating ? 1.55 : 1.25);
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(rx, ry);
+  const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+  gr.addColorStop(0, rgba(color, strength * 0.75)); gr.addColorStop(heating ? 0.56 : 0.38, rgba(color, strength * 0.28)); gr.addColorStop(1, rgba(color, 0));
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, 1, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+}
+function paint() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!geometry) return;
+  const center = geometry.map(0, 0)[0], head = geometry.map(0, -HALF_L)[1] - 6;
+  for (const s of ['left', 'right']) {
+    const scanning = reveal[s] !== revealTarget[s];
+    const active = action === 'support' && s === side && regionId;
+    const id = active ? regionId : trailing[s];
+    const fault = active && status === 'fault';
+    const energy = !id ? 0 : active ? (scanning ? reveal[s] : 1) : reveal[s];
+    const lit = id && energy > 0.001;
+    // 外罩揭开：有扫描时跟随扫描线，没有扫描（如故障）但有光效时直接揭开。
+    const open = scanning ? reveal[s] : lit ? 1 : reveal[s];
+    const tint = active ? tintOf(status) : COLORS.hold, dir = active && !fault ? direction(status) : 0;
+    const animate = active && !fault && !reduced.matches;
+    const revealImage = layers.reveal[s], glowImage = lit && layers.glow[id];
+    const g = lit && metadata.regions.find((r) => r.id === id && r.kind === 'air')?.glow;
+    let baked = false;
+    if (revealImage && open > 0) {
+      const front = open >= 1 ? canvas.height : geometry.map(0, scanFront(open))[1];
+      ctx.save();
+      ctx.beginPath();
+      if (s === 'left') ctx.rect(center, head, canvas.width - center, front - head);
+      else ctx.rect(0, head, center, front - head);
+      ctx.clip();
+      ctx.drawImage(revealImage, 0, 0, canvas.width, canvas.height);
+      if (glowImage && g) {
+        const breathe = animate && dir === 0 ? 0.72 + 0.28 * (0.5 + 0.5 * Math.sin(clock * 2.6)) : 1;
+        paintGlow(glowImage, g, { tint, strength: energy * breathe, dir, animate, s });
+        baked = true;
+      }
+      ctx.restore();
+    }
+    if (lit && !baked) {
+      const bags = geometry.bags.filter((b) => b.regionId === id);
+      ctx.save(); ctx.clip(geometry.surface);
+      if (bags.length) paintCircuit(bags, { tint, energy, dir, fault, animate });
+      ctx.restore();
+    }
+    if (scanning && reveal[s] > 0 && reveal[s] < 1) paintScan(s, reveal[s]);
+  }
+  if (action === 'heat' || action === 'massage') {
+    const kind = action === 'heat' ? 'heating' : 'massage';
+    for (const region of metadata.regions.filter((r) => r.kind === kind && r.side === side && (kind === 'massage' || r.id === side + '.lumbar')))
+      softGlow(kind === 'heating' ? '#ffa36b' : '#c49be8', region, kind === 'heating', kind === 'heating' ? 0.85 : 0.4);
+  }
+}
+function tick(now) {
+  // 扫描按真实经过时间推进（后台降帧时也按时完成），光效动画每帧最多推进 0.1 秒。
+  const elapsed = Math.min(1, (now - last) / 1000), dt = Math.min(0.1, elapsed);
+  last = now;
+  if (!reduced.matches) clock += dt;
+  let moving = false;
+  for (const s of ['left', 'right']) {
+    const step = reduced.matches ? 1 : elapsed / FX.scanSeconds;
+    reveal[s] += Math.sign(revealTarget[s] - reveal[s]) * Math.min(Math.abs(revealTarget[s] - reveal[s]), step);
+    if (reveal[s] === 0) trailing[s] = null;
+    moving ||= reveal[s] !== revealTarget[s];
+  }
+  paint();
+  const animating = mode === '2d' && (moving || (action === 'support' && status !== 'fault' && !reduced.matches));
+  raf = animating ? requestAnimationFrame(tick) : 0;
+}
+function restart() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(tick); } }
+
+// 模拟原生 auto 策略：某侧开始调节时扫描入场，结束时扫描退场、最后的气路随之淡出；同侧换部位不重新入场。
+function syncReveal(previous) {
+  for (const s of ['left', 'right']) {
+    const wasActive = previous.action === 'support' && previous.side === s && previous.status !== 'fault';
+    const isActive = action === 'support' && side === s && status !== 'fault';
+    if (isActive) { revealTarget[s] = 1; trailing[s] = null; }
+    else { revealTarget[s] = 0; if (wasActive) trailing[s] = previous.regionId; }
+  }
+  if (reduced.matches) for (const s of ['left', 'right']) reveal[s] = revealTarget[s];
+}
+function change(update) {
+  const previous = { action, side, status, regionId };
+  update();
+  syncReveal(previous);
+  updateStatus(); apply3d(); restart(); paint();
+}
+
+function airRegions() { return metadata ? metadata.regions.filter((r) => r.kind === 'air' && r.side === side) : []; }
+function fillRegions() {
+  const names = { shoulder: '肩部', lumbar: '腰部', hip: '臀部', leg: '腿部' };
+  $('#region').replaceChildren(...airRegions().map((r) => {
+    const option = document.createElement('option'), key = r.id.split('.')[1];
+    option.value = r.id;
+    option.textContent = names[key] || key.replace('circuit', '气路');
+    return option;
+  }));
+  regionId = (airRegions().find((r) => /lumbar|circuit4/.test(r.id)) || airRegions()[0])?.id ?? null;
+  $('#region').value = regionId;
+}
+function updateStatus() {
+  const names = { inflating: '充气', deflating: '放气', adjusting: '保压', fault: '故障' };
+  const what = action === 'support' ? $('#region').selectedOptions[0]?.textContent + ' · ' + names[status] : { heat: '腰部加热', massage: '按摩', clear: '待机' }[action];
+  $('#status').textContent = `${model === 't12' ? 'T12' : 'T11+'} · 人体${side === 'left' ? '左' : '右'}侧 · ${what}`;
+}
+function apply3d() {
+  if (!loaded) return;
+  try {
+    const w = frame.contentWindow.mattress, info = w.getModelInfo();
+    w.animation.setPolicy('app');
+    for (const s of ['left', 'right']) {
+      w.effects.setSideReveal(s, { phase: 'closed' });
+      for (const r of info.regions.filter((r) => r.side === (s === 'left' ? 1 : 0))) w.setAirState(r.id, { value: 50, status: 'idle' });
+      w.heating.setState(s + '.lumbar', { level: 0, status: 'off' });
+      if (info.capabilities?.massage) w.massage.setState(s, { status: 'off' });
+    }
+    w.effects.setHighlight([]);
+    if (action === 'support' && regionId) {
+      w.effects.setSideReveal(side, { progress: 1, phase: 'adjust' });
+      w.effects.setHighlight([regionId]);
+      w.setAirState(regionId, { value: 50, status });
+      if (direction(status)) w.air.moveTo(regionId, { target: direction(status) > 0 ? 85 : 15, ratePerSecond: 14 });
+    } else if (action === 'heat') w.heating.setState(side + '.lumbar', { level: 3, status: 'heating' });
+    else if (action === 'massage') w.massage.setState(side, { status: 'running', intensity: 0.8, cycleSeconds: 8 });
+  } catch (e) { $('#status').textContent = '3D 状态未能同步：' + e.message; }
+}
+async function wait3d() {
+  const until = Date.now() + 30000, id = model;
+  while (Date.now() < until && id === model) {
+    try {
+      const w = frame.contentWindow?.mattress;
+      if (w?.getModelInfo?.().id === model && metadata) {
+        w.camera.setPose({ position: metadata.camera.position, target: metadata.camera.target, duration: 0 });
+        w.grid.visible = false;
+        loaded = true; apply3d(); setMode(mode); return;
+      }
+    } catch { /* 3D 页面仍在加载 */ }
+    await new Promise((r) => setTimeout(r, 180));
+  }
+}
+function setMode(next) {
+  mode = next;
+  if (next === '3d' && frame.dataset.model !== model) {
+    loaded = false; frame.dataset.model = model;
+    frame.src = `/embed.html?embed=1&model=${model === 't12' ? 'T12' : 'T11+'}`;
+    wait3d();
+  }
+  frame.style.display = next === '3d' ? 'block' : 'none';
+  poster.style.display = next === '2d' ? 'block' : 'none';
+  $('#mode2d').classList.toggle('selected', next === '2d');
+  $('#mode3d').classList.toggle('selected', next === '3d');
+  $('#badge').textContent = next === '2d' ? '二维降级 · 固定床尾视角' : loaded ? 'WebGL 3D · 同机位' : 'WebGL 3D · 加载中';
+  if (next === '2d') restart();
+}
+function loadImage(src) {
+  return new Promise((resolve) => { const image = new Image(); image.onload = () => resolve(image); image.onerror = () => resolve(null); image.src = src; });
+}
+async function loadModel() {
+  const root = `/src/fallback-assets/${model}/`;
+  $('#base').src = root + 'base.png';
+  metadata = await (await fetch(root + 'regions.json')).json();
+  const [left, right] = await Promise.all(['left', 'right'].map((s) => loadImage(`${root}reveal-${s}.png`)));
+  const glow = {};
+  await Promise.all(metadata.regions.filter((r) => r.kind === 'air' && r.glow).map(async (r) => { glow[r.id] = await loadImage(root + r.glow.image); }));
+  layers = { reveal: { left, right }, glow };
+  canvas.width = metadata.width; canvas.height = metadata.height;
+  geometry = buildGeometry(metadata, BUILTIN_PROFILES.find((p) => p.id === model));
+  for (const s of ['left', 'right']) { reveal[s] = 0; revealTarget[s] = 0; trailing[s] = null; }
+  fillRegions();
+  change(() => {});
+  if (mode === '3d') setMode('3d');
+}
+const select = (group, button) => document.querySelectorAll(group).forEach((b) => b.classList.toggle('selected', b === button));
+document.querySelectorAll('[data-model]').forEach((b) => (b.onclick = () => { model = b.dataset.model; select('[data-model]', b); loadModel(); }));
+document.querySelectorAll('[data-side]').forEach((b) => (b.onclick = () => change(() => { side = b.dataset.side; select('[data-side]', b); fillRegions(); })));
+document.querySelectorAll('[data-status]').forEach((b) => (b.onclick = () => change(() => { status = b.dataset.status; select('[data-status]', b); action = 'support'; select('[data-action]', $('[data-action=support]')); })));
+document.querySelectorAll('[data-action]').forEach((b) => (b.onclick = () => change(() => { action = b.dataset.action; select('[data-action]', b); })));
+$('#region').onchange = (e) => change(() => { regionId = e.target.value; });
+$('#mode2d').onclick = () => setMode('2d');
+$('#mode3d').onclick = () => setMode('3d');
+reduced.addEventListener('change', () => { restart(); paint(); });
+select('[data-model]', $(`[data-model="${model}"]`));
+setMode(mode);
+loadModel().catch((e) => { $('#status').textContent = '资源载入失败：' + e.message; });
+</script>
+</body>
+</html>

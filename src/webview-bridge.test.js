@@ -111,3 +111,15 @@ test('legacy JSON dispatch retains structured errors for null requests', async (
   const { dispatchModel } = await import('./model-dispatch.js');
   assert.equal((await dispatchModel({}, null)).error.code, 'INVALID_METHOD');
 });
+
+test('disposal invalidates a pending model load before it can install a token', async () => {
+  const { call, viewer, bridge } = setup();
+  let resolve;
+  viewer.setModel = () => new Promise((r) => (resolve = r));
+  const pending = call('setModel', ['T12']);
+  await Promise.resolve();
+  await call('dispose');
+  resolve({ modelToken: 'late' });
+  assert.equal((await pending).error.code, 'MODEL_SUPERSEDED');
+  assert.equal(bridge.modelToken, null);
+});

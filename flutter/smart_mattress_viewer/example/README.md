@@ -12,3 +12,5 @@ flutter run -d <Android或iOS设备ID>
 Android 示例使用 Gradle 8.6 / AGP 8.3.2 / Kotlin 1.9.22 / compileSdk 34；iOS deployment target 16.4。构建命令：flutter build apk --debug；flutter build ios --simulator --debug --no-codesign。
 
 示例可帮助验证接入，不是经过门店或目标手机性能验收的正式 App。详见上级 INTEGRATION.md。
+
+展示策略可使用 auto、threeD、twoD、staticImage；自动模式不要求预先知道电视型号。纯二维与静态路径不创建 WebView。模式切换会使旧 Session 失效，实际接入须按上级 INTEGRATION.md 重建状态订阅；二维不提供交互镜头或真实几何折弯，角度由示意表达。示例的本地状态模拟不能证明真实 MQTT 的序号连续性或设备完成状态。
