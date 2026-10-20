@@ -122,6 +122,85 @@ test('hidden air rows catch up on reveal and cached cover/bindings follow massag
   }
 });
 
+const maxDiff = (a, b) => a.reduce((m, v, i) => Math.max(m, Math.abs(v - b[i])), 0);
+const coverTrims = (bed) => [
+  ...bed.coverDetails,
+  ...bed.tailoredDetails,
+  ...bed.branding,
+  bed.waistband,
+];
+
+test('massage-only cover frames match a full rebuild vertex by vertex, flat and fully bent', () => {
+  const { bed, state } = fixture(),
+    { bed: reference } = fixture();
+  state.airReveal = { phase: 'closed' };
+  let fullNormals = 0;
+  const computeVertexNormals = bed.cover.geometry.computeVertexNormals;
+  bed.cover.geometry.computeVertexNormals = function () {
+    fullNormals++;
+    return computeVertexNormals.call(this);
+  };
+  // 参照床每帧清空缓存：床罩整网格重算、全部附件重新贴合，即原实现的结果。
+  const rebuild = (s) => {
+    reference.deformationCaches = new WeakMap();
+    reference.boundSurfaceVersions = new WeakMap();
+    reference.update(structuredClone(s));
+  };
+  const assertSame = (a, b) => {
+    for (const name of ['position', 'normal'])
+      assert.ok(
+        maxDiff(a.geometry.attributes[name].array, b.geometry.attributes[name].array) < 1e-6,
+        `${a.name} ${name}`,
+      );
+  };
+  const lane = (phase, amount = 1, intensity = 0.7) => ({ amount, intensity, phase });
+  const steps = [
+    [0, 0, { left: lane(0), right: lane(0.2) }],
+    [0, 0, { left: lane(0.11), right: lane(0.31, 0.45, 1) }],
+    [0, 0, { left: lane(0.27), right: lane(0.52, 0.45, 1) }],
+    [65, 35, { left: lane(0.4), right: lane(0.66) }],
+    [65, 35, { left: lane(0.43, 1, 1), right: lane(0.71) }],
+    [65, 35, { left: lane(0.43, 0.3, 1), right: lane(0.9, 0.2) }],
+    [65, 35, { left: lane(0, 0), right: lane(0, 0) }],
+  ];
+  steps.forEach(([back, leg, massage], step) => {
+    const posed = back !== state.back,
+      before = fullNormals,
+      trimVersions = coverTrims(bed).map(version);
+    Object.assign(state, { back, leg, massage });
+    if (step === 2) bed.setWaistband(true);
+    if (step === 2) reference.setWaistband(true);
+    bed.update(state);
+    rebuild(state);
+    // 同一姿态下只改按摩：不再整网格重算法线，未触及按摩区域的附件不重写也不重新上传。
+    assert.equal(fullNormals, before + (step === 0 || posed ? 1 : 0));
+    const cover = bed.cover.geometry,
+      expected = reference.cover.geometry;
+    assertSame(bed.cover, reference.cover);
+    assert.ok(cover.boundingBox.equals(expected.boundingBox));
+    assert.ok(cover.boundingSphere.equals(expected.boundingSphere));
+    coverTrims(bed).forEach((trim, i) => {
+      assert.equal(trim.visible, coverTrims(reference)[i].visible);
+      if (!trim.visible) return;
+      assertSame(trim, coverTrims(reference)[i]);
+      if (step && !posed && step !== 2 && !bed.touchesMassage(trim))
+        assert.equal(version(trim), trimVersions[i], trim.name);
+    });
+  });
+  // T12 当前布局：按摩区域不触及任何包边、提手、标签或 Logo，按摩帧全部跳过重新贴合。
+  assert.ok(coverTrims(bed).every((trim) => !bed.touchesMassage(trim)));
+  // 床罩隐藏期间按摩继续变化（姿态不变），重新显示后按最新床面补齐。
+  bed.update({ ...state, mechanism: true, massage: { left: lane(0.6) } });
+  assert.equal(bed.cover.visible, false);
+  const hidden = fullNormals;
+  Object.assign(state, { massage: { left: lane(0.62), right: lane(0.1) } });
+  bed.update(state);
+  rebuild(state);
+  assert.equal(fullNormals, hidden);
+  assertSame(bed.cover, reference.cover);
+  coverTrims(bed).forEach((trim, i) => trim.visible && assertSame(trim, coverTrims(reference)[i]));
+});
+
 test('hologram time animation avoids static geometry work and hidden sides update when shown', () => {
   const effect = new FirmnessEffect(profile.airbags);
   effect.root.visible = true;

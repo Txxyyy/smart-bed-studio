@@ -21,7 +21,7 @@ test('side entry rotates and pulls closer throughout the same flight', () => {
       assertAlive() {},
       invalidate() {},
       emit() {},
-      renderer: { render() {} },
+      renderer: { render() {}, shadowMap: {} },
       media: { matches: false },
       actionCounter: 0,
       frames: 0,

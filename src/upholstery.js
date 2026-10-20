@@ -189,9 +189,8 @@ function createSurfaceSeam(
   return seam;
 }
 
-function attachmentNormals(cover) {
-  const p = cover.geometry.attributes.position,
-    normal = cover.geometry.attributes.normal;
+function attachmentCache(cover) {
+  const p = cover.geometry.attributes.position;
   let cache = cover.attachmentNormalCache;
   if (!cache) {
     const groups = [],
@@ -206,24 +205,77 @@ function attachmentNormals(cover) {
       ids[i] = keys.get(key);
       groups[ids[i]].push(i);
     }
+    // 分组成员按原顺序展平，逐组求和与归一化在类型数组上进行。
+    const starts = new Uint32Array(groups.length + 1);
+    groups.forEach((group, g) => (starts[g + 1] = starts[g] + group.length));
     cache = cover.attachmentNormalCache = {
       groups,
+      ids,
+      starts,
+      members: Uint32Array.from(groups.flat()),
       values: new Float32Array(p.count * 3),
       version: -1,
     };
   }
-  if (cache.version !== p.version) {
-    const n = new THREE.Vector3(),
-      v = new THREE.Vector3();
-    for (const group of cache.groups) {
-      n.set(0, 0, 0);
-      for (const i of group) n.add(v.fromBufferAttribute(normal, i));
-      n.normalize();
-      for (const i of group) n.toArray(cache.values, i * 3);
+  return cache;
+}
+
+// 与 Vector3 add/normalize 相同的运算顺序：同位置顶点法线依次相加后乘以 1/长度。
+function writeGroupNormals(normal, cache, groups) {
+  const n = normal.array,
+    { starts, members, values } = cache;
+  for (let k = 0; k < groups.length; k++) {
+    const g = groups[k];
+    let x = 0,
+      y = 0,
+      z = 0;
+    for (let e = starts[g]; e < starts[g + 1]; e++) {
+      const i = members[e] * 3;
+      x += n[i];
+      y += n[i + 1];
+      z += n[i + 2];
     }
+    const scale = 1 / (Math.sqrt(x * x + y * y + z * z) || 1);
+    for (let e = starts[g]; e < starts[g + 1]; e++) {
+      const i = members[e] * 3;
+      values[i] = x * scale;
+      values[i + 1] = y * scale;
+      values[i + 2] = z * scale;
+    }
+  }
+}
+
+function attachmentNormals(cover) {
+  const p = cover.geometry.attributes.position,
+    cache = attachmentCache(cover);
+  if (cache.version !== p.version) {
+    cache.all ??= Uint32Array.from(cache.groups.keys());
+    writeGroupNormals(cover.geometry.attributes.normal, cache, cache.all);
     cache.version = p.version;
   }
   return cache.values;
+}
+
+// 与 vertices 共用位置的全部顶点：它们的平滑贴合法线会随 vertices 的法线变化。
+export function attachmentNeighbours(cover, vertices) {
+  const { groups, ids } = attachmentCache(cover),
+    mask = new Uint8Array(ids.length);
+  for (const v of vertices) for (const i of groups[ids[v]]) mask[i] = 1;
+  return mask;
+}
+
+// 床罩只有 vertices 的法线改变时，只刷新它们所在的同位置分组。缓存若不是 previousVersion
+// （之前已过期），保持过期，留给下次整体重算。
+export function refreshAttachmentNormals(cover, vertices, previousVersion) {
+  const cache = cover.attachmentNormalCache;
+  if (cache?.version !== previousVersion) return;
+  if (cache.partial?.vertices !== vertices)
+    cache.partial = {
+      vertices,
+      groups: Uint32Array.from(new Set(vertices.map((v) => cache.ids[v]))),
+    };
+  writeGroupNormals(cover.geometry.attributes.normal, cache, cache.partial.groups);
+  cache.version = cover.geometry.attributes.position.version;
 }
 
 // Distance along the rounded rectangle, with the wrap located at the head end.

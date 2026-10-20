@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { RenderScheduler, renderBudget } from './render-budget.js';
 import { MattressViewer } from './mattress-sdk.js';
+import { WebGLObjects } from 'three/src/renderers/webgl/WebGLObjects.js';
 test('auto preserves original quality and native refresh on touch and desktop', () => {
   for (const mobile of [true, false])
     assert.deepEqual(renderBudget('auto', mobile), {
@@ -132,4 +133,40 @@ test('native cadence runs every 60/90/120Hz refresh without timer pacing or skip
     f.scheduler.cancel();
     assert.equal(f.rafs.size, 0);
   }
+});
+
+test('geometry changed in the frame after a shadow refresh is uploaded in that frame', () => {
+  // three.js 主通道在帧号递增前、阴影通道在递增后上传几何；用真实 WebGLObjects 复现这一顺序。
+  const info = { render: { frame: 0 } },
+    uploads = [],
+    geometries = { get: (object, geometry) => geometry, update: (g) => uploads.push(g.version) },
+    objects = new WebGLObjects(null, geometries, null, null, info),
+    mesh = { geometry: { version: 0 } },
+    shadowMap = { enabled: true, needsUpdate: true };
+  const v = Object.create(MattressViewer.prototype);
+  Object.assign(v, {
+    lastFrame: 0,
+    frames: 0,
+    controls: { update() {}, autoRotate: false },
+    renderer: {
+      shadowMap,
+      info,
+      render() {
+        objects.update(mesh);
+        info.render.frame++;
+        if (shadowMap.enabled && shadowMap.needsUpdate) {
+          objects.update(mesh);
+          shadowMap.needsUpdate = false;
+        }
+      },
+    },
+  });
+  v.frame(16);
+  // 下一帧只有按摩等几何变化、不刷新阴影，且之后不再绘制（例如减少动态效果时停止按摩）。
+  mesh.geometry.version = 1;
+  v.frame(32);
+  assert.equal(uploads.at(-1), 1);
+  mesh.geometry.version = 2;
+  v.frame(48);
+  assert.equal(uploads.at(-1), 2);
 });
