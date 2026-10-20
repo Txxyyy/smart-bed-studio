@@ -208,3 +208,75 @@ test('massage frames reuse per-pose curve samples and still match the original s
     for (const entry of heat.entries) assertOnSurface(heat, entry, state);
   }
 });
+
+test('dynamic heat waves reuse per-frame massage pulses and stay bit-identical to the per-point formula', (t) => {
+  const { heat, profile, state } = fixture(t);
+  // NaN 强度会让包围球为 NaN，three 会打印错误；这里只比较数值。
+  t.mock.method(console, 'error', () => {});
+  state.heating = [
+    [3, 3],
+    [3, 3],
+  ];
+  // 记录写入 Float32 属性前的双精度参数，避免 Float32 舍入掩盖 1 ulp 差异。
+  const doubles = heat.entries.map((entry) => {
+    const attribute = entry.waves.geometry.attributes.position,
+      setXYZ = attribute.setXYZ,
+      values = new Float64Array(attribute.count * 3);
+    attribute.setXYZ = function (i, x, y, z) {
+      values.set([x, y, z], i * 3);
+      return setXYZ.call(this, i, x, y, z);
+    };
+    return values;
+  });
+  const flat = buildSpine(0, 0),
+    bent = buildSpine(65, 35),
+    lane = (amount, intensity, phase) => ({ amount, intensity, phase });
+  for (const [spine, channels, left, right, time] of [
+    [flat, profile.massage, lane(1, 0.7, 0.1), lane(1, 0.7, 0.4), 0.5],
+    [bent, profile.massage, lane(1, 1, 0.33), lane(0.4, 0.2, 0.9), 2.25],
+    [bent, profile.massage.slice(1), lane(1, 1, 0.61), lane(1, 1, 0.12), 7.1],
+    [flat, profile.massage, lane(0, 1, 0), lane(0.8, 0, 0.5), 3],
+    [flat, [], lane(1, 1, 0.2), lane(1, 1, 0.2), 4],
+    // 未经 SDK 校验的通道值：权重为 0 的项照常相乘，NaN/Infinity 与原公式一样传播
+    [bent, profile.massage, lane(1, NaN, 0.2), lane(1, Infinity, 0.6), 5.5],
+    [flat, profile.massage, lane(1, 0.7, NaN), lane(NaN, 0.7, 0.3), 6],
+    // 连续播放：隆起的末位差异多数被曲线基点吸收，需要足够多帧才能暴露乘法顺序的改变
+    ...Array.from({ length: 400 }, (_, f) => [
+      f % 3 ? bent : flat,
+      profile.massage,
+      lane(1, 0.7, (f * 0.0137) % 1),
+      lane(0.85, 0.55, (f * 0.0291 + 0.3) % 1),
+      f / 60,
+    ]),
+  ]) {
+    Object.assign(state, { spine, time, massageChannels: channels, massage: { left, right } });
+    heat.update(state);
+    const y = heat.surfaceTop + SHOWROOM_LAYOUT.heatGap;
+    for (const [k, entry] of heat.entries.entries()) {
+      assert.equal(entry.waves.visible, true);
+      const positions = entry.waves.geometry.attributes.position.array,
+        { x: cx, z: cz } = entry.definition;
+      for (let strand = 0; strand < 3; strand++)
+        for (let segment = 0; segment < 12; segment++)
+          for (let end = 0; end < 2; end++) {
+            const u = (segment + end) / 12,
+              phase = time * 1.5 + u * 7 + strand,
+              x = cx + (strand - 1) * 0.15 + Math.sin(phase) * 0.013,
+              z = cz + Math.cos(phase) * 0.013,
+              expected = mapPoint(
+                spine,
+                x,
+                y + 0.01 + u * 0.1 + massageSurfaceLift(channels, state.massage, x, z),
+                z,
+                null,
+                false,
+              ),
+              i = (strand * 24 + segment * 2 + end) * 3;
+            ['x', 'y', 'z'].forEach((axis, n) => {
+              assert.ok(Object.is(doubles[k][i + n], expected[axis]));
+              assert.ok(Object.is(positions[i + n], Math.fround(expected[axis])));
+            });
+          }
+    }
+  }
+});

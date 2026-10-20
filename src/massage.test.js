@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { ModelRegistry, validateProfile } from './model-profiles.js';
 import { DeviceState } from './device-state.js';
-import { MassageMotion, massagePulse, massageSurfaceLift } from './massage.js';
+import { MassageMotion, massagePadWeight, massagePulse, massageSurfaceLift } from './massage.js';
 import { MassageEffect } from './massage-effect.js';
 import { MattressViewer } from './mattress-sdk.js';
 import { SmartBed } from './model.js';
@@ -341,4 +341,57 @@ test('support pressure leaves the cover flat while massage lifts only the active
   }
   bed.update(state);
   assert.deepEqual(bed.cover.geometry.attributes.position.array, flat);
+});
+
+// 修改前的逐圆囊公式，用于逐位对照提前排除后的实现。
+function originalPadWeight(pad, x, z) {
+  let weight = 0;
+  for (const cell of pad.cells) {
+    const distance =
+      Math.hypot(x - pad.x - cell.x, z - pad.z - cell.z) / (cell.radius * D.surfaceSpread);
+    if (distance < 1)
+      weight = Math.max(weight, Math.pow(0.5 + 0.5 * Math.cos(Math.PI * distance), 2));
+  }
+  return weight;
+}
+
+test('massage pad weights skip out-of-reach cells and stay bit-identical to the per-cell formula', () => {
+  const pads = profile.massage.flatMap((channel) => channel.pads),
+    odd = [0, -0, -0.043, NaN, Infinity, 1e-300].map((radius) => ({
+      x: 0.4,
+      z: -0.24,
+      cells: [{ x: 0.01, z: -0.02, radius }],
+    })),
+    same = (pad, x, z) =>
+      assert.ok(
+        Object.is(massagePadWeight(pad, x, z), originalPadWeight(pad, x, z)),
+        `${pad.x},${pad.z} @ ${x},${z}`,
+      );
+  // 整床 1 cm 网格
+  for (let i = 0; i <= 160; i++)
+    for (let j = 0; j <= 190; j++) for (const pad of pads) same(pad, i / 100 - 0.8, j / 100 - 0.95);
+  // 沿坐标轴从圆内逼近包围边界（|dx| 或 |dz| = reach·(1 − δ)，此处权重仍非 0）及边界外侧
+  for (const pad of [...pads, ...odd])
+    for (const cell of pad.cells) {
+      const reach = cell.radius * D.surfaceSpread;
+      for (const delta of [0.5, 1e-2, 1e-4, 1e-6, 1e-7, 1e-8, 1e-12, 1e-16, 0, -1e-16, -1e-8])
+        for (const d of [reach * (1 - delta), -reach * (1 - delta)])
+          for (const near of [0, 1e-12, reach * 1e-3]) {
+            same(pad, pad.x + cell.x + d, pad.z + cell.z + near);
+            same(pad, pad.x + cell.x + near, pad.z + cell.z + d);
+          }
+    }
+  // 非有限坐标：NaN 不满足排除条件，与原公式一样跳过；Infinity 被排除，原公式距离同为 Infinity
+  for (const pad of [...pads, ...odd])
+    for (const x of [NaN, Infinity, -Infinity, 0.4])
+      for (const z of [NaN, Infinity, -Infinity, -0.24]) {
+        same(pad, x, z);
+        same(pad, z, x);
+      }
+  // 排除条件依赖的性质
+  for (let i = 0; i < 20000; i++) {
+    const a = Math.sin(i * 12.9898) * 10 ** ((i % 9) - 4),
+      b = Math.cos(i * 78.233) * 10 ** ((i % 7) - 3);
+    assert.ok(Math.hypot(a, b) >= Math.max(Math.abs(a), Math.abs(b)));
+  }
 });
