@@ -92,6 +92,8 @@ export const T11_AIR_BAGS = Object.freeze(
           bottom: AIR_LAYOUT.bottom,
           minHalfHeight: AIR_LAYOUT.minHalfHeight,
           halfHeightRange: AIR_LAYOUT.halfHeightRange,
+          // 外形仍是圆角矩形条囊，标记后与 T12 共用逐路调节光效和展示态深色底座。
+          shape: 'strip',
         }),
       ),
     ),

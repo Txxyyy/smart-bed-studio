@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>降级视觉对比</title>
+  <style>
+    :root{color-scheme:dark;--bg:#10191d;--line:#31434a;--text:#e9eff1;--muted:#9eb2b9}
+    *{box-sizing:border-box}
+    body{margin:0;background:#0b1419;color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    header{height:60px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #283b44;background:#101c22}
+    header strong{font-size:13px;letter-spacing:.2em}
+    header span{font-size:12px;color:var(--muted)}
+    main{max-width:1800px;margin:auto;padding:18px;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px}
+    .stage{height:calc(100vh - 96px);min-height:540px;background:var(--bg);border:1px solid var(--line);border-radius:16px;position:relative;overflow:hidden;display:grid;place-items:center}
+    .stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+    .poster{position:absolute;inset:0;display:none}
+    .badge{position:absolute;top:16px;left:17px;background:#0a151bcf;border:1px solid #526873;border-radius:99px;padding:7px 12px;font-size:12px;z-index:3}
+    aside{display:flex;flex-direction:column;gap:12px}
+    .card{border:1px solid var(--line);border-radius:13px;padding:16px;background:linear-gradient(150deg,#182b34,#101e25)}
+    .eyebrow{font-size:10px;letter-spacing:.2em;color:#88a3ae}
+    h1{font-size:17px;margin:6px 0 8px}
+    p{margin:0;color:#acbdc2;font-size:13px}
+    .selector{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:5px;background:#0b171d;border-radius:10px;padding:5px;margin-top:10px}
+    button{font:inherit;font-size:13px;color:#d7e7eb;background:transparent;border:1px solid transparent;border-radius:8px;padding:8px 6px;cursor:pointer}
+    button.selected{color:#a9f1ff;background:#263e47;border-color:#547681}
+    select{width:100%;margin-top:10px;font:inherit;font-size:13px;color:#d7e7eb;background:#0b171d;border:1px solid #2f4a54;border-radius:8px;padding:8px}
+    .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:12px;color:#acbdc2}
+    .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+    .status{margin-top:10px;padding:10px;background:#0d1a20;border-radius:8px;color:#c6d9dd;font-size:12px}
+    .note{font-size:11px;color:#8fa6ae;padding:4px 2px}
+    @media(max-width:900px){main{grid-template-columns:1fr;padding:10px}.stage{height:64vh;min-height:0}}
+  </style>
+</head>
+<body>
+<header><strong>FALLBACK · VISUAL REVIEW</strong><span>固定床尾视角 · 人体仰躺左右 · 演示数据</span></header>
+<main>
+  <section class="stage">
+    <iframe id="webgl" title="WebGL 3D"></iframe>
+    <div class="poster" id="poster"></div>
+    <div class="badge" id="badge">二维降级</div>
+  </section>
+  <aside>
+    <section class="card">
+      <span class="eyebrow">MODEL · MODE</span><h1>型号与展示方式</h1>
+      <div class="selector" id="models"><button data-model="t11-plus" class="selected">T11+</button><button data-model="t12">T12</button></div>
+      <div class="selector"><button id="mode2d" class="selected">二维降级</button><button id="mode3d">原始 3D</button></div>
+    </section>
+    <section class="card">
+      <span class="eyebrow">ADJUSTMENT</span><h1>软硬调节</h1>
+      <div class="selector"><button data-side="left" class="selected">人体左侧</button><button data-side="right">人体右侧</button></div>
+      <select id="region" aria-label="气路"></select>
+      <div class="selector" id="statuses">
+        <button data-status="inflating" class="selected">充气</button><button data-status="deflating">放气</button><button data-status="adjusting">保压</button><button data-status="fault">故障</button>
+      </div>
+      <div class="legend"><span><i style="background:#16c8ff"></i>充气</span><span><i style="background:#ff8a1e"></i>放气</span><span><i style="background:#7fe2ff"></i>保压</span><span><i style="background:#ff3048"></i>故障</span></div>
+      <div class="selector"><button data-action="support" class="selected">调节</button><button data-action="heat">加热</button><button data-action="massage">按摩</button><button data-action="clear">待机</button></div>
+      <div class="status" id="status">正在加载资源…</div>
+    </section>
+    <div class="note">二维层由 src/fallback-view.js 绘制（主页面“展示方式”切换共用），与 Flutter 原生 SoftLightPainter 同一画法，仅供视觉评审；正式降级由 Flutter 原生绘制。电视性能及兼容性仍需实机验证。</div>
+  </aside>
+</main>
+<script type="module">
+import { BUILTIN_PROFILES } from '/src/model-profiles.js';
+import { FallbackView } from '/src/fallback-view.js';
+import { fallbackWebAssets } from '/src/fallback-web-assets.js';
+
+// 二维画面由 src/fallback-view.js 绘制（主页面“展示方式”切换共用，与 Flutter SoftLightPainter 同一画法）。
+// 本页只维护演示状态，并按原生 auto 策略模拟扫描入场/退场。
+const SCAN_SECONDS = 0.95;
+const $ = (s) => document.querySelector(s);
+const frame = $('#webgl'), poster = $('#poster');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+const params = new URLSearchParams(location.search);
+let model = params.get('model') === 't12' ? 't12' : 't11-plus';
+let mode = params.get('mode') === '3d' ? '3d' : '2d';
+let metadata, side = 'left', regionId = null, status = 'inflating', action = 'support', loaded = false;
+const reveal = { left: 0, right: 0 }, revealTarget = { left: 0, right: 0 };
+const view = new FallbackView(poster);
+const direction = (s) => (s === 'inflating' ? 1 : s === 'deflating' ? -1 : 0);
+
+function demoFrame(dt) {
+  const scanning = {};
+  for (const s of ['left', 'right']) {
+    // 扫描按真实经过时间推进（每帧最多 0.1 秒），减少动态效果时直接到位。
+    const step = reduced.matches ? 1 : dt / SCAN_SECONDS;
+    reveal[s] += Math.sign(revealTarget[s] - reveal[s]) * Math.min(Math.abs(revealTarget[s] - reveal[s]), step);
+    scanning[s] = reveal[s] !== revealTarget[s];
+  }
+  const support = action === 'support' && regionId;
+  return {
+    online: true,
+    air: support ? { [regionId]: { status } } : {},
+    reveals: { ...reveal },
+    scanning,
+    heating: action === 'heat' ? { [side + '.lumbar']: { status: 'heating', level: 3 } } : {},
+    heatingMax: {},
+    massage: action === 'massage' ? { [side]: { status: 'running', intensity: 0.8, cycleSeconds: 8 } } : {},
+  };
+}
+// 模拟原生 auto 策略：某侧开始调节时扫描入场，结束时扫描退场、最后的气路随之淡出；同侧换部位不重新入场。
+function syncReveal() {
+  for (const s of ['left', 'right'])
+    revealTarget[s] = action === 'support' && side === s && status !== 'fault' ? 1 : 0;
+  if (reduced.matches) for (const s of ['left', 'right']) reveal[s] = revealTarget[s];
+}
+function change(update) {
+  update();
+  syncReveal();
+  updateStatus(); apply3d();
+}
+
+function airRegions() { return metadata ? metadata.regions.filter((r) => r.kind === 'air' && r.side === side) : []; }
+function fillRegions() {
+  const names = { shoulder: '肩部', lumbar: '腰部', hip: '臀部', leg: '腿部' };
+  $('#region').replaceChildren(...airRegions().map((r) => {
+    const option = document.createElement('option'), key = r.id.split('.')[1];
+    option.value = r.id;
+    option.textContent = names[key] || key.replace('circuit', '气路');
+    return option;
+  }));
+  regionId = (airRegions().find((r) => /lumbar|circuit4/.test(r.id)) || airRegions()[0])?.id ?? null;
+  $('#region').value = regionId;
+}
+function updateStatus() {
+  const names = { inflating: '充气', deflating: '放气', adjusting: '保压', fault: '故障' };
+  const what = action === 'support' ? $('#region').selectedOptions[0]?.textContent + ' · ' + names[status] : { heat: '腰部加热', massage: '按摩', clear: '待机' }[action];
+  $('#status').textContent = `${model === 't12' ? 'T12' : 'T11+'} · 人体${side === 'left' ? '左' : '右'}侧 · ${what}`;
+}
+function apply3d() {
+  if (!loaded) return;
+  try {
+    const w = frame.contentWindow.mattress, info = w.getModelInfo();
+    w.animation.setPolicy('app');
+    for (const s of ['left', 'right']) {
+      w.effects.setSideReveal(s, { phase: 'closed' });
+      for (const r of info.regions.filter((r) => r.side === (s === 'left' ? 1 : 0))) w.setAirState(r.id, { value: 50, status: 'idle' });
+      w.heating.setState(s + '.lumbar', { level: 0, status: 'off' });
+      if (info.capabilities?.massage) w.massage.setState(s, { status: 'off' });
+    }
+    w.effects.setHighlight([]);
+    if (action === 'support' && regionId) {
+      w.effects.setSideReveal(side, { progress: 1, phase: 'adjust' });
+      w.effects.setHighlight([regionId]);
+      w.setAirState(regionId, { value: 50, status });
+      if (direction(status)) w.air.moveTo(regionId, { target: direction(status) > 0 ? 85 : 15, ratePerSecond: 14 });
+    } else if (action === 'heat') w.heating.setState(side + '.lumbar', { level: 3, status: 'heating' });
+    else if (action === 'massage') w.massage.setState(side, { status: 'running', intensity: 0.8, cycleSeconds: 8 });
+  } catch (e) { $('#status').textContent = '3D 状态未能同步：' + e.message; }
+}
+async function wait3d() {
+  const until = Date.now() + 30000, id = model;
+  while (Date.now() < until && id === model) {
+    try {
+      const w = frame.contentWindow?.mattress;
+      if (w?.getModelInfo?.().id === model && metadata) {
+        w.camera.setPose({ position: metadata.camera.position, target: metadata.camera.target, duration: 0 });
+        w.grid.visible = false;
+        loaded = true; apply3d(); setMode(mode); return;
+      }
+    } catch { /* 3D 页面仍在加载 */ }
+    await new Promise((r) => setTimeout(r, 180));
+  }
+}
+function setMode(next) {
+  mode = next;
+  if (next === '3d' && frame.dataset.model !== model) {
+    loaded = false; frame.dataset.model = model;
+    frame.src = `/embed.html?embed=1&model=${model === 't12' ? 'T12' : 'T11+'}`;
+    wait3d();
+  }
+  frame.style.display = next === '3d' ? 'block' : 'none';
+  poster.style.display = next === '2d' ? 'block' : 'none';
+  $('#mode2d').classList.toggle('selected', next === '2d');
+  $('#mode3d').classList.toggle('selected', next === '3d');
+  $('#badge').textContent = next === '2d' ? '二维降级 · 固定床尾视角' : loaded ? 'WebGL 3D · 同机位' : 'WebGL 3D · 加载中';
+  if (next === '2d') view.start(demoFrame); else view.stop();
+}
+async function loadModel() {
+  const resources = fallbackWebAssets(model);
+  metadata = resources.metadata;
+  await view.setModel(model, { ...resources, profile: BUILTIN_PROFILES.find((p) => p.id === model) });
+  for (const s of ['left', 'right']) { reveal[s] = 0; revealTarget[s] = 0; }
+  fillRegions();
+  change(() => {});
+  if (mode === '3d') setMode('3d');
+}
+const select = (group, button) => document.querySelectorAll(group).forEach((b) => b.classList.toggle('selected', b === button));
+document.querySelectorAll('[data-model]').forEach((b) => (b.onclick = () => { model = b.dataset.model; select('[data-model]', b); loadModel(); }));
+document.querySelectorAll('[data-side]').forEach((b) => (b.onclick = () => change(() => { side = b.dataset.side; select('[data-side]', b); fillRegions(); })));
+document.querySelectorAll('[data-status]').forEach((b) => (b.onclick = () => change(() => { status = b.dataset.status; select('[data-status]', b); action = 'support'; select('[data-action]', $('[data-action=support]')); })));
+document.querySelectorAll('[data-action]').forEach((b) => (b.onclick = () => change(() => { action = b.dataset.action; select('[data-action]', b); })));
+$('#region').onchange = (e) => change(() => { regionId = e.target.value; });
+$('#mode2d').onclick = () => setMode('2d');
+$('#mode3d').onclick = () => setMode('3d');
+select('[data-model]', $(`[data-model="${model}"]`));
+setMode(mode);
+loadModel().catch((e) => { $('#status').textContent = '资源载入失败：' + e.message; });
+</script>
+</body>
+</html>

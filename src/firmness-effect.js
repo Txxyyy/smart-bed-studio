@@ -4,7 +4,7 @@ import { SHOWROOM_LAYOUT } from './dimensions.js';
 import { mapPoint } from './kinematics.js';
 import { DEFAULT_AIR_BAGS, humanSide } from './air-layout.js';
 import { isSelectedZone } from './firmness.js';
-import { RoundCellEffect } from './air-cell-effect.js';
+import { AirCellEffect, hasCellFx } from './air-cell-effect.js';
 
 const vertexShader = `
   attribute vec3 localPosition;
@@ -65,14 +65,14 @@ export class FirmnessEffect {
     this.root.name = 'Firmness_Showroom_Overlay';
     this.root.visible = false;
     this.entries = [];
-    // T12 等圆囊阵列使用独立的逐路调节光效；矩形气囊保留原全息层。
-    if (airbags.some((b) => b.shape === 'round-array')) {
-      this.cells = new RoundCellEffect(airbags);
+    // T12 圆囊阵列与 T11+ 条囊使用逐路调节光效；其他矩形气囊保留原全息层。
+    if (airbags.some(hasCellFx)) {
+      this.cells = new AirCellEffect(airbags);
       this.root.add(...this.cells.objects);
       this.entries.push(...this.cells.rows);
     }
     for (const definition of airbags) {
-      if (definition.shape === 'round-array') continue;
+      if (hasCellFx(definition)) continue;
       const { side, zone, width, depth } = definition;
       const geometry = new RoundedBoxGeometry(
         width,
@@ -149,7 +149,7 @@ export class FirmnessEffect {
     const { spine, pressures, selection, time, moving } = state;
     const animating = this.cells?.update(state) ?? false;
     for (const entry of this.entries) {
-      if (entry.round) continue;
+      if (entry.cellFx) continue;
       const { definition, side, zone, tile, pulse, particles, rest } = entry;
       const selected = selection.activeRegionIds
         ? selection.activeRegionIds.includes(definition.regionId)

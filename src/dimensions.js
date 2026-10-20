@@ -194,6 +194,11 @@ export const T12_AIR_FX = Object.freeze({
   gridLift: 0.0007,
   gridPitch: 0.04,
   gridInset: 0.012,
-  traceRadius: 0.0042,
   relayoutStep: 0.0015, // 目标环、光点跟随高度变化的最小重排步长
+  // T11+ 条囊沿用上面的光效参数，以下只用于圆角矩形轮廓。
+  stripCapCorner: 0.012, // 顶面描边与刻度带的圆角
+  stripRingSegments: 96,
+  stripDashes: 44,
+  stripSparks: 24,
+  stripBreathe: 0.02, // 倍，保压呼吸环的缩放幅度（圆囊为 0.09）
 });

@@ -236,3 +236,21 @@ npm run build:flutter
 | `AGENTS.md` / `CLAUDE.md` / `.claude/` | Codex 与 Claude Code 协作规则及云端环境，见 [协作约定](docs/AGENT_COLLABORATION.md) |
 
 网页开发使用 `npm run dev`：`/` 为展示控制页，`/?embed=1` 为纯模型，`/?studio=1` 为原设计工作台。历史材质、机构、导出及 V.12–V.19 说明保留在 [MODEL_HISTORY.md](docs/MODEL_HISTORY.md)。当前型号、区域与 App 左右定义以本 README 和接口文档为准。
+
+## 原生降级展示
+
+部分电视无法加载 3D 或运行卡顿时，Flutter 可显式选择 `RenderPolicy.auto`：先显示离线床垫图并尝试 3D，失败后使用原生二维。`twoD` 和 `staticImage` 不创建 WebView；未指定策略仍保留原来的 threeD。自动选择无需提供电视型号，不能替代后续目标设备体验验证。
+
+二维调节光效取自 3D 渲染：某侧开始调节时，该侧外罩随扫描线换成 3D 揭开后的透视层，调节中的气路叠加按状态着色的 3D 光效层（充气青、放气琥珀、保压浅青、故障红），并有流光表示充放气方向。资源由 `npm run export:fallback` 从 3D 重新渲染，再经 `npm run build:flutter` 打包。
+
+- [模式、切换和接口能力](docs/RENDER_FALLBACK.md)
+- [静态资源制作与版本检查](docs/FALLBACK_ASSETS.md)
+- [重复 onReady 与业务订阅迁移](docs/FLUTTER_INTEGRATION.md#9-自动降级与订阅迁移)
+
+升级自动模式前，App 必须在每次后端就绪时取消旧展示订阅、重建固定 Session 并提交最新快照；详情页不能继续使用旧 Session。
+
+### 降级视觉对比
+
+主页面右侧控制台的“展示方式”可在“3D 模型”和“二维降级”之间切换（也可直接打开 `/?render=2d`）。二维降级与 3D 共用同一套型号、自适应调节、加热、按摩和床体姿态控制，切换时正在进行的调节不中断；二维为固定床尾视角，不提供镜头和内部结构展示，床体角度以数值显示。二维画面由 `src/fallback-view.js` 绘制；`npm run build` 会把二维图片复制到 `dist/fallback-assets/`，不内联进单文件页面。
+
+另有 `/fallback-compare.html` 用于同机位对比：可切换 T11+ / T12、人体左右侧、气路和充气 / 放气 / 保压 / 故障，并与同机位的原始 3D 对比。网页与 Flutter 原生绘制同一画法，仅作视觉评审，电视兼容性仍需实际终端验证。
