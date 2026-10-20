@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { mapPoint } from './kinematics.js';
+import { sampleSpine } from './kinematics.js';
 import { T12_MASSAGE_LAYOUT as D } from './dimensions.js';
 import { massagePulse } from './massage.js';
 import { MassageSurfaceCache } from './massage-surface.js';
@@ -47,6 +47,23 @@ function patch(pad, surface) {
   mesh.renderOrder = surface ? 5 : 1;
   mesh.userData.rest = geometry.attributes.position.clone();
   return mesh;
+}
+
+// 光圈与波纹顶点的 x/z 固定，逐帧只改高度。按姿态缓存每个顶点的曲线基点与朝向，
+// 逐帧只做乘加，结果与 mapPoint(spine, x, y, z, null, false) 逐位一致。
+function spineTerms(entry, spine, rest, z) {
+  if (entry.spine !== spine) {
+    entry.terms ??= new Float64Array(rest.count * 4);
+    for (let i = 0; i < rest.count; i++) {
+      const s = sampleSpine(spine, z + rest.getZ(i));
+      entry.terms[i * 4] = s.y;
+      entry.terms[i * 4 + 1] = s.z;
+      entry.terms[i * 4 + 2] = Math.cos(s.angle);
+      entry.terms[i * 4 + 3] = Math.sin(s.angle);
+    }
+    entry.spine = spine;
+  }
+  return entry.terms;
 }
 
 function bellowsGeometry() {
@@ -176,12 +193,16 @@ export class MassageEffect {
           massagePulse(lane.phase, row, pads.length) * lane.intensity;
         const rest = mesh.userData.rest,
           p = mesh.geometry.attributes.position,
-          heights = glow.surface.update(lanes);
+          heights = glow.surface.update(lanes),
+          terms = spineTerms(glow, spine, rest, z);
         for (let i = 0; i < p.count; i++) {
-          const px = x + rest.getX(i),
-            pz = z + rest.getZ(i),
-            point = mapPoint(spine, px, this.surfaceTop + 0.003 + heights[i], pz, null, false);
-          p.setXYZ(i, point.x, point.y, point.z);
+          const height = this.surfaceTop + 0.003 + heights[i];
+          p.setXYZ(
+            i,
+            x + rest.getX(i),
+            terms[i * 4] + height * terms[i * 4 + 2],
+            terms[i * 4 + 1] + height * terms[i * 4 + 3],
+          );
         }
         p.needsUpdate = true;
         mesh.geometry.computeBoundingSphere();
@@ -189,26 +210,25 @@ export class MassageEffect {
       if (!visible) continue;
       // The opaque-cover presentation only renders surface glows and ripples.
       // Keep its hidden internal meshes out of per-frame deformation and uploads.
-      pads.forEach(({ definition, ripple, surface }, row) => {
-        const lift = massagePulse(lane.phase, row, pads.length) * lane.intensity * amount;
+      pads.forEach((pad, row) => {
+        const { definition, ripple, surface } = pad,
+          lift = massagePulse(lane.phase, row, pads.length) * lane.intensity * amount;
         const rest = ripple.userData.rest,
           p = ripple.geometry.attributes.position,
           u = ripple.material.uniforms,
-          heights = surface.update(lanes);
+          heights = surface.update(lanes),
+          terms = spineTerms(pad, spine, rest, definition.z);
         u.amount.value = amount;
         u.pulse.value = lift;
         u.phase.value = ((((lane.phase - row / pads.length) * 2) % 1) + 1) % 1;
         for (let i = 0; i < p.count; i++) {
-          const point = mapPoint(
-            spine,
+          const height = this.surfaceTop + 0.004 + heights[i];
+          p.setXYZ(
+            i,
             definition.x + rest.getX(i),
-            this.surfaceTop + 0.004 + heights[i],
-            definition.z + rest.getZ(i),
-            null,
-            false,
-            this.airbags,
+            terms[i * 4] + height * terms[i * 4 + 2],
+            terms[i * 4 + 1] + height * terms[i * 4 + 3],
           );
-          p.setXYZ(i, point.x, point.y, point.z);
         }
         p.needsUpdate = true;
         ripple.geometry.computeBoundingSphere();

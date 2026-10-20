@@ -4,7 +4,13 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { buildSpine, sampleSpine, mapPoint } from './kinematics.js';
 import { createAnatomy } from './anatomy.js';
 import { createHeadboard, HEADBOARD_LAYOUT } from './headboard.js';
-import { createBoundWelt, updateBoundWelt, perimeterDistance } from './upholstery.js';
+import {
+  createBoundWelt,
+  updateBoundWelt,
+  perimeterDistance,
+  attachmentNeighbours,
+  refreshAttachmentNormals,
+} from './upholstery.js';
 import { solveMechanism } from './mechanism.js';
 import { createCadFrame } from './cad-frame.js';
 import {
@@ -16,6 +22,7 @@ import {
 } from './dimensions.js';
 import { DEFAULT_AIR_BAGS } from './air-layout.js';
 import { CoverReveal } from './cover-reveal.js';
+import { CoverMassageRegion } from './cover-massage.js';
 import { massagePadWeight, massagePulse } from './massage.js';
 import { FOUNDATION_FOAM, T12_MASSAGE_LAYOUT } from './dimensions.js';
 import { circuitTubePaths } from './t12-circuits.js';
@@ -129,6 +136,22 @@ function perimeterTube(parent, name, width, length, centerZ, y, radius, tubeRadi
   );
 }
 
+// 整网格变形与按摩局部重写共用同一表达式，两条路径的顶点结果逐位一致。
+function placeOnSpine(attribute, i, rest, spine, height, explode) {
+  const f = THREE.MathUtils.clamp((rest[i * 3 + 2] - spine.min) / spine.step, 0, spine.count),
+    j = Math.min(Math.floor(f), spine.count - 1),
+    t = f - j,
+    p = spine.samples[j],
+    q = spine.samples[j + 1];
+  const angle = p.angle + (q.angle - p.angle) * t;
+  attribute.setXYZ(
+    i,
+    rest[i * 3],
+    p.y + (q.y - p.y) * t + height * Math.cos(angle) + explode,
+    p.z + (q.z - p.z) * t + height * Math.sin(angle),
+  );
+}
+
 function softBox(w, h, d, yCenter, mat, parent, name, longSegments = 96, widthSegments = 12) {
   const g = new THREE.BoxGeometry(w, h, d, widthSegments, 3, longSegments);
   const p = g.attributes.position;
@@ -158,6 +181,7 @@ export class SmartBed {
       channel.pads.map((pad, row) => ({ pad, channel, row })),
     );
     this.boundSurfaceVersions = new WeakMap();
+    this.massageDetailHits = new WeakMap();
     this.pouchDeformationCaches = new WeakMap();
     this.root = new THREE.Group();
     this.root.name = 'NOCTIS_SmartBed';
@@ -599,15 +623,13 @@ export class SmartBed {
           ? this.airLayout.map((bag) => pressures[bag.side][bag.zone])
           : [];
     let cache = this.deformationCaches.get(obj);
-    if (
+    const samePose =
       cache?.spine === spine &&
       cache.position === a &&
       cache.rest === rest &&
       cache.explode === explode &&
-      cache.inflate === inflate &&
-      sameValues(cache.values, values)
-    )
-      return;
+      cache.inflate === inflate;
+    if (samePose && sameValues(cache.values, values)) return;
     if (!cache || cache.position !== a || cache.rest !== rest) cache = {};
     // Support pressure never deforms the cover, and rigid tubes need no air weights.
     if (inflate && obj !== this.cover && !cache.weights) {
@@ -643,13 +665,13 @@ export class SmartBed {
       });
       this.massageWeights.set(obj, massageWeights);
     }
+    // 姿态、展开不变而只有按摩隆起变化时，只重写按摩区域的顶点与法线。
+    if (samePose && obj === this.cover && lifts.every(Number.isFinite)) {
+      this.deformCoverMassage(spine, explode, lifts, massageWeights);
+      cache.values = values;
+      return;
+    }
     for (let i = 0; i < a.count; i++) {
-      const f = THREE.MathUtils.clamp((rest[i * 3 + 2] - spine.min) / spine.step, 0, spine.count),
-        j = Math.min(Math.floor(f), spine.count - 1),
-        t = f - j,
-        p = spine.samples[j],
-        q = spine.samples[j + 1];
-      const angle = p.angle + (q.angle - p.angle) * t;
       let height = rest[i * 3 + 1];
       if (obj === this.cover) {
         for (let k = 0; k < lifts.length; k++)
@@ -658,12 +680,7 @@ export class SmartBed {
         this.airLayout.forEach((bag, k) => {
           height += cache.weights[i * this.airLayout.length + k] * pressures[bag.side][bag.zone];
         });
-      a.setXYZ(
-        i,
-        rest[i * 3],
-        p.y + (q.y - p.y) * t + height * Math.cos(angle) + explode,
-        p.z + (q.z - p.z) * t + height * Math.sin(angle),
-      );
+      placeOnSpine(a, i, rest, spine, height, explode);
     }
     a.needsUpdate = true;
     obj.geometry.computeVertexNormals();
@@ -671,6 +688,43 @@ export class SmartBed {
     obj.geometry.computeBoundingSphere();
     Object.assign(cache, { spine, position: a, rest, explode, inflate, values });
     this.deformationCaches.set(obj, cache);
+    // 此版本之后若只有按摩局部变化，未触及按摩区域的贴合附件可沿用原结果。
+    if (obj === this.cover) this.coverFullVersion = a.version;
+  }
+
+  deformCoverMassage(spine, explode, lifts, massageWeights) {
+    const geometry = this.cover.geometry,
+      a = geometry.attributes.position,
+      rest = this.cover.userData.rest;
+    this.coverMassage ??= new CoverMassageRegion(geometry, massageWeights, this.massagePads.length);
+    const region = this.coverMassage,
+      { moved, offsets, pads, weights } = region;
+    for (let m = 0; m < moved.length; m++) {
+      const i = moved[m];
+      let height = rest[i * 3 + 1];
+      for (let e = offsets[m]; e < offsets[m + 1]; e++) height += weights[e] * lifts[pads[e]];
+      placeOnSpine(a, i, rest, spine, height, explode);
+    }
+    const previous = a.version;
+    a.needsUpdate = true;
+    region.writeNormals(geometry);
+    refreshAttachmentNormals(this.cover, region.normalVertices, previous);
+    region.writeBounds(geometry);
+  }
+
+  // 附件绑定的床罩顶点（平滑法线时含同位置顶点）是否会被按摩改变位置或法线。
+  touchesMassage(detail) {
+    let hit = this.massageDetailHits.get(detail);
+    if (hit === undefined) {
+      const { bindings, smooth } = detail.surfaceBinding,
+        moved = this.coverMassage.movedMask;
+      this.massageNormalMask ??= attachmentNeighbours(this.cover, this.coverMassage.normalVertices);
+      hit = bindings.some(({ ids }) =>
+        ids.some((id) => moved[id] || (smooth && this.massageNormalMask[id])),
+      );
+      this.massageDetailHits.set(detail, hit);
+    }
+    return hit;
   }
 
   deformAirPouch(obj, bag, spine, halfHeight, seal = false) {
@@ -701,6 +755,17 @@ export class SmartBed {
     const position = detail.surfaceBinding.cover.geometry.attributes.position,
       cache = this.boundSurfaceVersions.get(detail);
     if (cache?.position === position && cache.version === position.version) return;
+    // 上次贴合之后床罩只有按摩局部变化，且附件不在按摩区域：结果不变，只记下新版本。
+    if (
+      cache?.position === position &&
+      cache.version >= this.coverFullVersion &&
+      detail.surfaceBinding.cover === this.cover &&
+      this.coverMassage &&
+      !this.touchesMassage(detail)
+    ) {
+      cache.version = position.version;
+      return;
+    }
     updateBoundWelt(detail);
     this.boundSurfaceVersions.set(detail, { position, version: position.version });
   }

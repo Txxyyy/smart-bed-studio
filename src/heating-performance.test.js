@@ -172,3 +172,39 @@ test('a reopened heat zone catches up to pose and massage changes while it was o
   assert.equal(entry.mesh.geometry.attributes.position.version, before + 1);
   assertOnSurface(heat, entry, state);
 });
+
+test('massage frames reuse per-pose curve samples and still match the original surface formula', (t) => {
+  const { heat, profile, state } = fixture(t);
+  state.heating = [
+    [3, 3],
+    [3, 3],
+  ];
+  state.moving = false;
+  // 同一姿态对象连续多帧复用曲线缓存，换姿态或按摩布局后重新取样；每帧逐顶点与原公式对照。
+  const flat = buildSpine(0, 0),
+    bent = buildSpine(65, 35);
+  for (const [spine, channels, phase] of [
+    [flat, [], 0],
+    [flat, profile.massage, 0.21],
+    [flat, profile.massage, 0.47],
+    [bent, profile.massage, 0.47],
+    [bent, profile.massage, 0.73],
+    [bent, profile.massage.slice(1), 0.73],
+    [bent, profile.massage, 0.86],
+    [flat, profile.massage, 0.9],
+  ]) {
+    state.spine = spine;
+    state.massageChannels = channels;
+    state.massage = {
+      left: { amount: 1, intensity: 1, phase },
+      right: { amount: 0.6, intensity: 0.7, phase: (phase + 0.13) % 1 },
+    };
+    const before = versions(heat);
+    heat.update(state);
+    assert.deepEqual(
+      versions(heat),
+      before.map((v) => v + 1),
+    );
+    for (const entry of heat.entries) assertOnSurface(heat, entry, state);
+  }
+});

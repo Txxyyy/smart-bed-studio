@@ -946,10 +946,11 @@ export class MattressViewer {
       });
       b.current.massage = b.massageMotion.snapshot();
       this.floor.visible = !(b.air.root.visible || b.store.initialized);
+      // 按摩相位不进入阴影键：床罩材质为单面，阴影通道只绘制背光的底面与远侧，按摩只抬起朝光的
+      // 顶面，阴影贴图内容不随按摩变化，无需逐帧重绘。
       const shadowKey = JSON.stringify([
         b.current.back,
         b.current.leg,
-        b.current.massage,
         this.viewMode,
         b.bed.surroundStyle,
         b.bed.headboardStyle,
@@ -1065,7 +1066,13 @@ export class MattressViewer {
     }
     this.controls.update(dt);
     moving ||= this.controls.autoRotate;
+    // three.js 按 info.render.frame 每帧只上传一次几何：主通道取帧号在递增之前，阴影通道在递增之后，
+    // 于是阴影刷新后的下一帧主通道会跳过投影物体的几何上传，本帧改动晚一帧才显示。按摩等变化不再
+    // 触发阴影刷新，若该帧恰为最后一帧（如减少动态效果时停止按摩）会停留在旧形态，故先推进帧号。
+    const shadowPass = this.renderer.shadowMap.enabled && this.renderer.shadowMap.needsUpdate;
+    if (this.shadowPassLastFrame) this.renderer.info.render.frame++;
     this.renderer.render(this.scene, this.activeCamera);
+    this.shadowPassLastFrame = shadowPass;
     this.completePresentation();
     this.frames++;
     this.dirty = false;
