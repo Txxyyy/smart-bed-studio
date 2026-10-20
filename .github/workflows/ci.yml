@@ -2,7 +2,8 @@ name: CI
 
 on:
   push:
-    branches: [main, 'claude/**']
+    # 本机分支 feat/ fix/，云端分支 claude/；推送即复核，不必等开 PR
+    branches: [main, 'feat/**', 'fix/**', 'claude/**']
   pull_request:
   workflow_dispatch:
 
