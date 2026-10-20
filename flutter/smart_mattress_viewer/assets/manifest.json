@@ -23,7 +23,7 @@
       "status": "generic"
     }
   ],
-  "sha256": "9ea16eef654ede364bacfdeb6d8a34a5e2145b612bfcda7e8fcb713095dae955",
+  "sha256": "13b5ec6907a1de772b2fa7c365dc0a227ffd915c00efc758cc5ddf174aac09bc",
   "runtime": {
     "webgl": 2,
     "chromium": 111,
@@ -51,8 +51,8 @@
   "files": [
     {
       "path": "mattress.html",
-      "bytes": 2296968,
-      "sha256": "9ea16eef654ede364bacfdeb6d8a34a5e2145b612bfcda7e8fcb713095dae955"
+      "bytes": 2297921,
+      "sha256": "13b5ec6907a1de772b2fa7c365dc0a227ffd915c00efc758cc5ddf174aac09bc"
     },
     {
       "path": "models/catalog.json",

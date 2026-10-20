@@ -1,7 +1,7 @@
-import { massagePulse, massageSurfaceLift } from './massage.js';
+import { massagePadWeight, massagePulse, massageSurfaceLift } from './massage.js';
 import * as THREE from 'three';
-import { SHOWROOM_LAYOUT } from './dimensions.js';
-import { mapPoint } from './kinematics.js';
+import { SHOWROOM_LAYOUT, T12_MASSAGE_LAYOUT } from './dimensions.js';
+import { mapPoint, sampleSpine } from './kinematics.js';
 import { DEFAULT_HEAT_PATCHES, DEFAULT_AIR_BAGS } from './air-layout.js';
 
 const NO_MASSAGE_CHANNELS = [];
@@ -28,6 +28,58 @@ const fragmentShader = `
     gl_FragColor=vec4(amber,(edge*.10+energy)*amount);
   }
 `;
+
+// 加热片顶点的 x/z 固定，姿态只改变曲线基点与朝向，按摩只改变高度。按姿态缓存每个顶点的
+// 曲线基点与朝向，按按摩布局缓存每个顶点对各按摩块的权重（已乘隆起高度），逐帧只做乘加，
+// 结果与 mapPoint(spine, x, y + massageSurfaceLift(...), z, null, false) 逐位一致。
+function spineTerms(entry, spine) {
+  if (entry.spine !== spine) {
+    const { rest, definition } = entry;
+    entry.spineTerms ??= new Float64Array(rest.count * 4);
+    for (let i = 0; i < rest.count; i++) {
+      const s = sampleSpine(spine, definition.z + rest.getZ(i));
+      entry.spineTerms[i * 4] = s.y;
+      entry.spineTerms[i * 4 + 1] = s.z;
+      entry.spineTerms[i * 4 + 2] = Math.cos(s.angle);
+      entry.spineTerms[i * 4 + 3] = Math.sin(s.angle);
+    }
+    entry.spine = spine;
+  }
+  return entry.spineTerms;
+}
+
+function massageTerms(entry, channels) {
+  if (entry.massageChannels !== channels) {
+    const { rest, definition } = entry,
+      pads = channels.flatMap((channel) => channel.pads);
+    entry.massageTerms = new Float64Array(rest.count * pads.length);
+    for (let i = 0; i < rest.count; i++) {
+      const x = definition.x + rest.getX(i),
+        z = definition.z + rest.getZ(i);
+      for (let k = 0; k < pads.length; k++)
+        entry.massageTerms[i * pads.length + k] =
+          massagePadWeight(pads[k], x, z) * T12_MASSAGE_LAYOUT.lift;
+    }
+    entry.massageChannels = channels;
+  }
+  return entry.massageTerms;
+}
+
+// 每个按摩块本帧的隆起系数；所在通道未运行时为 null，与 massageSurfaceLift 一样跳过。
+function massageLanes(channels, massage) {
+  return channels.flatMap((channel) => {
+    const lane = massage?.[channel.id];
+    return channel.pads.map((pad, row) =>
+      lane?.amount
+        ? {
+            amount: lane.amount,
+            intensity: lane.intensity,
+            pulse: massagePulse(lane.phase, row, channel.pads.length),
+          }
+        : null,
+    );
+  });
+}
 
 export class HeatingEffect {
   constructor(
@@ -143,7 +195,7 @@ export class HeatingEffect {
         false,
         this.airLayout,
       );
-    let surfaceVersion;
+    let surfaceVersion, lanes;
     for (const entry of this.entries) {
       const { definition, side, region, mesh, waves, rest } = entry;
       const amount = heating[side][region] / definition.maxLevel,
@@ -159,10 +211,24 @@ export class HeatingEffect {
       surfaceVersion ??= this.updateSurfaceVersion(spine, massageChannels, massage);
       // Time animates shader energy, not the surface. Hidden patches catch up on reopening.
       if (entry.surfaceVersion !== surfaceVersion) {
-        const positions = mesh.geometry.attributes.position;
+        const positions = mesh.geometry.attributes.position,
+          terms = spineTerms(entry, spine),
+          weights = massageTerms(entry, massageChannels);
+        lanes ??= massageLanes(massageChannels, massage);
         for (let i = 0; i < positions.count; i++) {
-          const p = map(cx + rest.getX(i), y, cz + rest.getZ(i));
-          positions.setXYZ(i, p.x, p.y, p.z);
+          let lift = 0;
+          for (let k = 0; k < lanes.length; k++) {
+            const lane = lanes[k];
+            if (lane)
+              lift += weights[i * lanes.length + k] * lane.amount * lane.intensity * lane.pulse;
+          }
+          const height = y + lift;
+          positions.setXYZ(
+            i,
+            cx + rest.getX(i),
+            terms[i * 4] + height * terms[i * 4 + 2],
+            terms[i * 4 + 1] + height * terms[i * 4 + 3],
+          );
         }
         positions.needsUpdate = true;
         mesh.geometry.computeBoundingSphere();
