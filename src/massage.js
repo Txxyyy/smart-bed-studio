@@ -77,11 +77,20 @@ export class MassageMotion {
 }
 
 // Compact, soft footprints are shared by the cover, heat and massage overlays.
+// 热纹每帧逐点调用。影响半径 reach > 0 且 |dx| 或 |dz| ≥ reach 时，Math.hypot ≥ max(|dx|, |dz|)
+// （V8 与 JavaScriptCore 都按最大分量归一化求和，和 ≥ 1）使距离 ≥ 1，原计算本就跳过该圆囊，
+// 先按包围范围排除可省去 hypot；NaN 不满足比较，仍走原计算，结果逐位不变。
 export function massagePadWeight(pad, x, z) {
+  const { cells } = pad,
+    spread = D.surfaceSpread;
   let weight = 0;
-  for (const cell of pad.cells) {
-    const distance =
-      Math.hypot(x - pad.x - cell.x, z - pad.z - cell.z) / (cell.radius * D.surfaceSpread);
+  for (let i = 0; i < cells.length; i++) {
+    const cell = cells[i],
+      dx = x - pad.x - cell.x,
+      dz = z - pad.z - cell.z,
+      reach = cell.radius * spread;
+    if (reach > 0 && (Math.abs(dx) >= reach || Math.abs(dz) >= reach)) continue;
+    const distance = Math.hypot(dx, dz) / reach;
     if (distance < 1)
       weight = Math.max(weight, Math.pow(0.5 + 0.5 * Math.cos(Math.PI * distance), 2));
   }

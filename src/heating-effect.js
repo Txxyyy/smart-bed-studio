@@ -1,4 +1,4 @@
-import { massagePadWeight, massagePulse, massageSurfaceLift } from './massage.js';
+import { massagePadWeight, massagePulse } from './massage.js';
 import * as THREE from 'three';
 import { SHOWROOM_LAYOUT, T12_MASSAGE_LAYOUT } from './dimensions.js';
 import { mapPoint, sampleSpine } from './kinematics.js';
@@ -72,6 +72,7 @@ function massageLanes(channels, massage) {
     return channel.pads.map((pad, row) =>
       lane?.amount
         ? {
+            pad,
             amount: lane.amount,
             intensity: lane.intensity,
             pulse: massagePulse(lane.phase, row, channel.pads.length),
@@ -79,6 +80,23 @@ function massageLanes(channels, massage) {
         : null,
     );
   });
+}
+
+// 热纹点的 x/z 随时间变化，权重只能逐点计算；脉动相位与位置无关，按帧复用。
+// 逐项相加且乘法顺序与 massageSurfaceLift 相同（权重为 0 的项也照常相乘），结果逐位一致。
+function massageLift(lanes, x, z) {
+  let height = 0;
+  for (let k = 0; k < lanes.length; k++) {
+    const lane = lanes[k];
+    if (lane)
+      height +=
+        massagePadWeight(lane.pad, x, z) *
+        T12_MASSAGE_LAYOUT.lift *
+        lane.amount *
+        lane.intensity *
+        lane.pulse;
+  }
+  return height;
 }
 
 export class HeatingEffect {
@@ -185,16 +203,6 @@ export class HeatingEffect {
   }) {
     if (!this.root.visible) return;
     const y = this.surfaceTop + SHOWROOM_LAYOUT.heatGap;
-    const map = (x, height, z) =>
-      mapPoint(
-        spine,
-        x,
-        height + massageSurfaceLift(massageChannels, massage, x, z),
-        z,
-        null,
-        false,
-        this.airLayout,
-      );
     let surfaceVersion, lanes;
     for (const entry of this.entries) {
       const { definition, side, region, mesh, waves, rest } = entry;
@@ -236,15 +244,22 @@ export class HeatingEffect {
       }
       if (waves.visible) {
         const a = waves.geometry.attributes.position;
+        lanes ??= massageLanes(massageChannels, massage);
         for (let strand = 0; strand < 3; strand++)
           for (let segment = 0; segment < 12; segment++)
             for (let end = 0; end < 2; end++) {
               const t = (segment + end) / 12,
-                phase = time * 1.5 + t * 7 + strand;
-              const p = map(
-                cx + (strand - 1) * 0.15 + Math.sin(phase) * 0.013,
-                y + 0.01 + t * 0.1,
-                cz + Math.cos(phase) * 0.013,
+                phase = time * 1.5 + t * 7 + strand,
+                x = cx + (strand - 1) * 0.15 + Math.sin(phase) * 0.013,
+                z = cz + Math.cos(phase) * 0.013;
+              const p = mapPoint(
+                spine,
+                x,
+                y + 0.01 + t * 0.1 + massageLift(lanes, x, z),
+                z,
+                null,
+                false,
+                this.airLayout,
               );
               a.setXYZ(strand * 24 + segment * 2 + end, p.x, p.y, p.z);
             }
